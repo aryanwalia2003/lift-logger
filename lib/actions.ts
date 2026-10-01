@@ -1,24 +1,20 @@
 "use server";
-import { eq, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { sets, workouts } from "@/db/schema";
-import { DAY_TYPES, EXERCISE_LIST, inDay, type DayType, type Exercise } from "./exercises";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { addSet, createWorkout, deleteSet } from "./workouts";
+import type { Label } from "./catalog";
 
-// Aaj ka workout nikalo ya bana do
-export function startWorkout(date: string, day: DayType) {
-  if (!DAY_TYPES.includes(day)) throw new Error("bad day");
-  const hit = db.select().from(workouts).where(sql`${workouts.date} = ${date} and ${workouts.day} = ${day}`).get();
-  return hit ?? db.insert(workouts).values({ date, day }).returning().get();
+export async function startWorkout(fd: FormData) {
+  redirect(`/workout/${createWorkout(fd.get("label") as Label).id}`);
 }
 
-export function logSet(workoutId: number, exercise: Exercise, weightKg: number, reps: number) {
-  if (!EXERCISE_LIST.includes(exercise)) throw new Error("bad exercise");
-  if (!(weightKg >= 0) || !Number.isInteger(reps) || reps < 1) throw new Error("bad weight/reps");
-  const w = db.select().from(workouts).where(eq(workouts.id, workoutId)).get();
-  if (!w) throw new Error("workout nahi mila");
-  if (!inDay(exercise, w.day)) throw new Error(`${exercise} ${w.day} day ka nahi hai`);
-  const setNo =
-    (db.select({ n: sql<number>`count(*)` }).from(sets)
-      .where(sql`${sets.workoutId} = ${workoutId} and ${sets.exercise} = ${exercise}`).get()?.n ?? 0) + 1;
-  return db.insert(sets).values({ workoutId, exercise, setNo, weightKg, reps }).returning().get();
+export async function logSet(fd: FormData) {
+  const workoutId = Number(fd.get("workoutId"));
+  addSet(workoutId, Number(fd.get("exerciseId")), Number(fd.get("weight")), Number(fd.get("reps")));
+  revalidatePath(`/workout/${workoutId}`);
+}
+
+export async function removeSet(fd: FormData) {
+  deleteSet(Number(fd.get("setId")));
+  revalidatePath(`/workout/${Number(fd.get("workoutId"))}`);
 }
