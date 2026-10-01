@@ -13,7 +13,7 @@ const { exerciseProgress, dayHistory } = await import("@/lib/analytics");
 const w = startWorkout("2026-10-01", "CHEST");
 logSet(w.id, "INCLINE_BENCH_PRESS", 60, 8);
 logSet(w.id, "INCLINE_BENCH_PRESS", 60, 6);
-assert.throws(() => logSet(w.id, "SQUAT", 100, 5)); // galat din
+assert.throws(() => logSet(w.id, "SQUATS", 100, 5)); // galat din
 assert.equal(exerciseProgress("INCLINE_BENCH_PRESS")[0].volume, 840);
 assert.equal(dayHistory("CHEST")[0].sets, 2);
 sqlite.close();

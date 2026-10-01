@@ -2,7 +2,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { sets, workouts } from "@/db/schema";
-import { DAY_TYPES, EXERCISE_LIST, EXERCISES, type DayType, type Exercise } from "./exercises";
+import { DAY_TYPES, EXERCISE_LIST, inDay, type DayType, type Exercise } from "./exercises";
 
 // Aaj ka workout nikalo ya bana do
 export function startWorkout(date: string, day: DayType) {
@@ -16,7 +16,7 @@ export function logSet(workoutId: number, exercise: Exercise, weightKg: number, 
   if (!(weightKg >= 0) || !Number.isInteger(reps) || reps < 1) throw new Error("bad weight/reps");
   const w = db.select().from(workouts).where(eq(workouts.id, workoutId)).get();
   if (!w) throw new Error("workout nahi mila");
-  if (EXERCISES[exercise] !== w.day) throw new Error(`${exercise} ${w.day} day ka nahi hai`);
+  if (!inDay(exercise, w.day)) throw new Error(`${exercise} ${w.day} day ka nahi hai`);
   const setNo =
     (db.select({ n: sql<number>`count(*)` }).from(sets)
       .where(sql`${sets.workoutId} = ${workoutId} and ${sets.exercise} = ${exercise}`).get()?.n ?? 0) + 1;
