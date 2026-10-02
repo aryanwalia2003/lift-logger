@@ -27,9 +27,24 @@ process.env.DB_FILE = ":memory:";
   w.addSet(wk.id, inc, 60, 6);
   w.addSet(wk.id, ex("squats").id, 100, 5); // leg day label ke bina bhi chalega
   assert.equal(w.lastSet(inc)!.reps, 6);
-  assert.equal(a.exerciseProgress(inc)[0].volume, 840);
-  assert.equal(a.labelHistory("CHEST_DAY")[0].sets, 3);
-  assert.equal(a.bodyPartHistory(suggested[0].id)[0].sets, 2);
+  const wk2 = w.createWorkout("PUSH", "2026-10-08");
+  w.addSet(wk2.id, inc, 62.5, 8); // e1RM badha → PR
+  const today = w.createWorkout("PUSH");
+  w.addSet(today.id, inc, 50, 10);
+  const old = w.createWorkout("LEG_DAY", "2020-01-01");
+  w.addSet(old.id, ex("squats").id, 40, 5);
+
+  const rows = a.loadRows();
+  const mine = rows.filter((r) => r.exerciseId === inc);
+  assert.deepEqual(a.exerciseSessions(mine).map((s) => s.pr), [false, false, true]);
+  assert.equal(a.exerciseSessions(mine)[0].volume, 840);
+  assert.equal(a.prs(rows).length, 2); // incline + squats (2020 se zyada)
+  assert.equal(a.byLabel(rows).find((l) => l.label === "CHEST_DAY")!.count, 1);
+  assert.equal(a.byPart(rows).find((p) => p.name === "chest")!.sets, 4);
+  assert.equal(a.weekStart("2026-10-01"), "2026-09-28");
+  const thisWeek = rows.filter((r) => a.weekStart(r.date) === a.weekStart(a.today())).length;
+  assert.equal(a.weekly(rows, 3).at(-1)!.sets, thisWeek);
+  assert.equal(a.inRange(rows, "30").length, rows.length - 1); // 2020 wala bahar
   sqlite.close();
   console.log("ok");
 })();

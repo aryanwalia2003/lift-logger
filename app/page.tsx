@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 export default function Home() {
   return (
     <main className="mx-auto w-full max-w-md p-4">
-      <h1 className="mb-1 text-2xl font-bold">Start workout</h1>
+      <div className="flex items-baseline justify-between">
+        <h1 className="mb-1 text-2xl font-bold">Start workout</h1>
+        <Link href="/analytics" className="text-sm font-semibold underline">Analytics →</Link>
+      </div>
       <p className="mb-4 text-sm opacity-60">Aaj ka din kaunsa hai?</p>
       <form action={startWorkout} className="grid grid-cols-2 gap-3">
         {LABEL_KEYS.map((k) => (
