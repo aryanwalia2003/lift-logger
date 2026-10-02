@@ -23,7 +23,7 @@ export default async function PartPage({ params, searchParams }: { params: Promi
     <>
       <h1 className="mt-3 text-2xl font-bold capitalize">{name}</h1>
       <RangeTabs base={`/analytics/part/${id}`} current={range} />
-      {rows.length === 0 ? <Card title="Kuch nahi mila"><Empty>Is range me {name} train nahi hua.</Empty></Card> : (
+      {rows.length === 0 ? <Card title="Nothing found"><Empty>{name} wasn&apos;t trained in this range.</Empty></Card> : (
         <>
           <Stats items={[
             ["Sets", String(s.sets)],
@@ -31,14 +31,14 @@ export default async function PartPage({ params, searchParams }: { params: Promi
             ["Sessions", String(s.workouts)],
             ["Last trained", s.last ? shortDate(s.last) : "—"],
           ]} />
-          <Card title="Weekly sets" sub="Hafte me kitne sets">
+          <Card title="Weekly sets" sub="Sets per week">
             <Bars data={wk.map((w) => ({ x: shortDate(w.week), tip: `Week of ${shortDate(w.week)}`, segs: subs.map((k) => ({ key: k, v: w.parts[k] ?? 0 })) }))} unit=" sets" />
             {subs.length > 1 && <Legend keys={subs} />}
           </Card>
-          <Card title="Kis label pe train kiya" sub="Sessions">
+          <Card title="Trained on which label" sub="Sessions">
             <HBars rows={Object.entries(labels).sort((a, b) => b[1] - a[1]).map(([l, n]) => ({ label: LABELS[l as keyof typeof LABELS].name, value: n, href: `/analytics/label/${l}`, color: PART_COLOR[name] }))} />
           </Card>
-          <Card title="Exercises" sub="Estimated 1RM ka change is range me">
+          <Card title="Exercises" sub="Change in estimated 1RM over this range">
             <ul className="divide-y divide-current/10">
               {exs.map((e) => (
                 <li key={e.id}>

@@ -4,12 +4,12 @@ import { bodyParts, exercises, sets, workouts } from "@/db/schema";
 import { LABELS, LABEL_KEYS, type Label } from "./catalog";
 
 export async function createWorkout(label: Label, date = new Date().toLocaleDateString("en-CA")) {
-  if (!LABEL_KEYS.includes(label)) throw new Error("bad label");
+  if (!LABEL_KEYS.includes(label)) throw new Error("Invalid label");
   return db.insert(workouts).values({ date, label }).returning().get();
 }
 
 const check = (weightKg: number, reps: number) => {
-  if (!(weightKg >= 0) || !Number.isInteger(reps) || reps < 1) throw new Error("bad weight/reps");
+  if (!(weightKg >= 0) || !Number.isInteger(reps) || reps < 1) throw new Error("Invalid weight or reps");
 };
 
 // Insert ke liye row banao: drop = us exercise ke latest main set se attach, setNo parent wala hi
@@ -19,7 +19,7 @@ async function setValues(workoutId: number, exerciseId: number, weightKg: number
   let parent: { id: number; setNo: number } | undefined;
   if (o.drop) {
     parent = await db.select().from(sets).where(main).orderBy(desc(sets.id)).limit(1).get();
-    if (!parent) throw new Error("drop se pehle main set log karo");
+    if (!parent) throw new Error("Log a main set before adding a drop");
   }
   const setNo = parent?.setNo ?? ((await db.select({ n: sql<number>`count(*)` }).from(sets).where(main).get())?.n ?? 0) + 1;
   return { workoutId, exerciseId, setNo, weightKg, reps, parentSetId: parent?.id, supersetId: o.supersetId };
@@ -31,10 +31,30 @@ export async function addSet(workoutId: number, exerciseId: number, weightKg: nu
 
 // Superset round: dono exercises ek saath, same supersetId — batch = atomic
 export async function addRound(workoutId: number, items: { exerciseId: number; weightKg: number; reps: number }[]) {
-  if (items.length !== 2 || items[0].exerciseId === items[1].exerciseId) throw new Error("superset ke liye 2 alag exercises chahiye");
+  if (items.length !== 2 || items[0].exerciseId === items[1].exerciseId) throw new Error("A superset needs 2 different exercises");
   const supersetId = ((await db.select({ m: sql<number>`coalesce(max(${sets.supersetId}), 0)` }).from(sets).get())?.m ?? 0) + 1;
   const [a, b] = await Promise.all(items.map((i) => setValues(workoutId, i.exerciseId, i.weightKg, i.reps, { supersetId }))); // pehle dono validate
   return (await db.batch([db.insert(sets).values(a).returning(), db.insert(sets).values(b).returning()])).flat();
+}
+
+const cleanNote = (s?: string | null) => {
+  const t = (s ?? "").trim();
+  if (t.length > 500) throw new Error("Note is too long (max 500 characters)");
+  return t || null;
+};
+
+// Set edit: weight, reps, note
+export async function updateSet(id: number, weightKg: number, reps: number, note?: string) {
+  check(weightKg, reps);
+  const row = await db.update(sets).set({ weightKg, reps, note: cleanNote(note) }).where(eq(sets.id, id)).returning().get();
+  if (!row) throw new Error("Set not found");
+  return row;
+}
+
+export async function setWorkoutNotes(id: number, notes?: string) {
+  const row = await db.update(workouts).set({ notes: cleanNote(notes) }).where(eq(workouts.id, id)).returning().get();
+  if (!row) throw new Error("Workout not found");
+  return row;
 }
 
 // Main set delete ho to uske drops bhi jaate hain
@@ -73,7 +93,7 @@ export const lastSet = (exerciseId: number) =>
 
 export const workoutSets = (workoutId: number) =>
   db
-    .select({ id: sets.id, exerciseId: sets.exerciseId, exercise: exercises.name, setNo: sets.setNo, weightKg: sets.weightKg, reps: sets.reps, parentSetId: sets.parentSetId, supersetId: sets.supersetId })
+    .select({ id: sets.id, exerciseId: sets.exerciseId, exercise: exercises.name, setNo: sets.setNo, weightKg: sets.weightKg, reps: sets.reps, parentSetId: sets.parentSetId, supersetId: sets.supersetId, note: sets.note })
     .from(sets)
     .innerJoin(exercises, eq(sets.exerciseId, exercises.id))
     .where(eq(sets.workoutId, workoutId))

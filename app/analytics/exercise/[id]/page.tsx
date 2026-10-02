@@ -23,7 +23,7 @@ export default async function ExercisePage({ params, searchParams }: { params: P
     <>
       <h1 className="mt-3 text-2xl font-bold capitalize">{ex.name}</h1>
       <RangeTabs base={`/analytics/exercise/${id}`} current={range} />
-      {!last ? <Card title="Kuch nahi mila"><Empty>Is range me ye exercise nahi hui.</Empty></Card> : (
+      {!last ? <Card title="Nothing found"><Empty>This exercise wasn&apos;t done in this range.</Empty></Card> : (
         <>
           <Stats items={[
             ["Best e1RM", kg(Math.max(...ss.map((s) => s.e1rm)))],
@@ -31,10 +31,10 @@ export default async function ExercisePage({ params, searchParams }: { params: P
             ["Sessions", String(ss.length)],
             ["Change", ss.length > 1 ? `${last.e1rm >= first.e1rm ? "▲" : "▼"} ${Math.abs((last.e1rm / first.e1rm - 1) * 100).toFixed(1)}%` : "—"],
           ]} />
-          <Card title="Estimated 1RM" sub="Har session ka best set, Epley formula">
+          <Card title="Estimated 1RM" sub="Best set per session, Epley formula">
             <LineChart points={ss.map((s) => ({ x: s.date, y: s.e1rm }))} />
           </Card>
-          <Card title="Top weight" sub="Session me sabse bhaari set">
+          <Card title="Top weight" sub="Heaviest set per session">
             <LineChart points={ss.map((s) => ({ x: s.date, y: s.topWeight }))} />
           </Card>
           <Card title="Volume per session" sub="Weight × reps">
@@ -43,13 +43,16 @@ export default async function ExercisePage({ params, searchParams }: { params: P
           <Card title="Rep ranges" sub="Total sets">
             <HBars rows={repBuckets(rows)} />
           </Card>
-          <Card title="History" sub="PR = naya estimated 1RM best · ↳ = drop set, SS = superset">
+          <Card title="History" sub="PR = new estimated 1RM best · ↳ = drop set, SS = superset">
             <ul className="divide-y divide-current/10">
               {[...ss].reverse().slice(0, 20).map((s) => (
                 <li key={s.id}>
                   <Link href={`/workout/${s.id}`} className="block py-2 text-sm">
                     <span className="flex justify-between"><span>{shortDate(s.date)}{s.sets.some((r) => r.supersetId) && <span className="ml-2 rounded bg-current/10 px-1.5 py-0.5 text-xs">SS</span>}</span>{s.pr && <span className="font-semibold">🏆 PR</span>}</span>
                     <span className="text-xs opacity-60">{s.sets.map((r) => `${r.isDrop ? "↳" : ""}${r.weight}×${r.reps}`).join(" · ")}</span>
+                    {s.sets.filter((r) => r.note).map((r, i) => (
+                      <span key={i} className="mt-0.5 block text-xs italic opacity-60">&ldquo;{r.note}&rdquo; ({r.weight}×{r.reps})</span>
+                    ))}
                   </Link>
                 </li>
               ))}

@@ -22,7 +22,7 @@ export function Card({ title, sub, children }: { title: string; sub?: string; ch
   );
 }
 
-export const Empty = ({ children = "Abhi data nahi — kuch sets log karo." }: { children?: React.ReactNode }) => (
+export const Empty = ({ children = "No data yet — log some sets." }: { children?: React.ReactNode }) => (
   <p className="py-4 text-center text-sm opacity-60">{children}</p>
 );
 
@@ -111,7 +111,7 @@ export function Bars({ data, unit = "", color = (k: string) => PART_COLOR[k] ?? 
 
 // Time-scaled line; last point aur max point labeled
 export function LineChart({ points, unit = "kg" }: { points: { x: string; y: number }[]; unit?: string }) {
-  if (points.length < 2) return <Empty>Kam se kam 2 sessions chahiye trend ke liye.</Empty>;
+  if (points.length < 2) return <Empty>Need at least 2 sessions to show a trend.</Empty>;
   const W = 320, H = 150, L = 34, R = 14, T = 16, B = 20;
   const ys = points.map((p) => p.y);
   const lo = Math.min(...ys), hi = Math.max(...ys), pad = (hi - lo) * 0.15 || hi * 0.1 || 1;

@@ -25,7 +25,7 @@ const insertAll = async <T extends SQLiteTable>(db: DB, table: T, rows: T["$infe
 // Sirf migrated + khali DB me (seed mat chalao — ids dump se aayenge)
 export async function restore(db: DB, d: Dump) {
   for (const t of [bodyParts, exercises, workouts, sets]) {
-    if (((await db.select({ n: sql<number>`count(*)` }).from(t).get())?.n ?? 0) > 0) throw new Error("target DB khali nahi hai");
+    if (((await db.select({ n: sql<number>`count(*)` }).from(t).get())?.n ?? 0) > 0) throw new Error("Target database is not empty");
   }
   await insertAll(db, bodyParts, d.bodyParts);
   await insertAll(db, exercises, d.exercises);

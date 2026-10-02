@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { addRound, addSet, createWorkout, deleteSet } from "./workouts";
+import { addRound, addSet, createWorkout, deleteSet, setWorkoutNotes, updateSet } from "./workouts";
 import type { Label } from "./catalog";
 
 export async function startWorkout(fd: FormData) {
@@ -31,4 +31,15 @@ export async function logSuperset(fd: FormData) {
 export async function removeSet(fd: FormData) {
   await deleteSet(Number(fd.get("setId")));
   revalidatePath(`/workout/${Number(fd.get("workoutId"))}`);
+}
+
+export async function editSet(fd: FormData) {
+  await updateSet(Number(fd.get("setId")), Number(fd.get("weight")), Number(fd.get("reps")), String(fd.get("note") ?? ""));
+  revalidatePath(`/workout/${Number(fd.get("workoutId"))}`);
+}
+
+export async function saveWorkoutNotes(fd: FormData) {
+  const workoutId = Number(fd.get("workoutId"));
+  await setWorkoutNotes(workoutId, String(fd.get("notes") ?? ""));
+  revalidatePath(`/workout/${workoutId}`);
 }

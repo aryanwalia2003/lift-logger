@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LABELS } from "@/lib/catalog";
-import { logDrop, logSet, logSuperset, removeSet } from "@/lib/actions";
+import { editSet, logDrop, logSet, logSuperset, removeSet, saveWorkoutNotes } from "@/lib/actions";
 import { exercisesOf, getExercise, getWorkout, lastSet, latestInWorkout, orderedBodyParts, workoutSets } from "@/lib/workouts";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +64,7 @@ export default async function Workout({ params, searchParams }: { params: Promis
 
       {picking && (
         <div className="mt-3 rounded-lg border border-foreground p-3 text-sm">
-          <span className="capitalize">{exercise?.name}</span> ke saath superset — partner exercise chuno
+          <span className="capitalize">{exercise?.name}</span> — pick a superset partner
           <Link href={href({ bp: q.bp, ex: q.ex })} className="ml-2 underline">cancel</Link>
         </div>
       )}
@@ -88,9 +88,9 @@ export default async function Workout({ params, searchParams }: { params: Promis
                   <div className="mb-1 mt-3 text-xs uppercase opacity-60">{e.part}</div>
                 )}
                 <Link href={picking ? href({ bp: q.bp, ex: q.ex, ss: String(e.id) }) : href({ bp: q.bp, ex: String(e.id) })}
-                  className={`flex justify-between rounded-lg border p-3 capitalize ${[q.ex, q.ss].includes(String(e.id)) ? "border-foreground" : "border-current/20"}`}>
-                  {e.name}
-                  {doneCount(e.id) > 0 && <span className="opacity-60">{doneCount(e.id)} sets</span>}
+                  className={`flex justify-between rounded-lg border p-3 ${[q.ex, q.ss].includes(String(e.id)) ? "border-foreground" : "border-current/20"}`}>
+                  <span className="capitalize">{e.name}</span>
+                  {doneCount(e.id) > 0 && <span className="opacity-60">{doneCount(e.id)} {doneCount(e.id) === 1 ? "set" : "sets"}</span>}
                 </Link>
               </li>
             ))}
@@ -100,25 +100,56 @@ export default async function Workout({ params, searchParams }: { params: Promis
 
       {byEx.length > 0 && (
         <>
-          <h2 className="mb-2 mt-8 text-sm font-semibold uppercase opacity-60">Aaj ka log</h2>
+          <h2 className="mb-2 mt-8 text-sm font-semibold uppercase opacity-60">Today&apos;s log</h2>
           {byEx.map((g) => (
             <div key={g.name} className="mb-3">
               <div className="font-medium capitalize">{g.name}</div>
               {g.sets.map((s) => (
-                <form key={s.id} action={removeSet} className="flex items-center justify-between py-1 text-sm">
-                  <span className={s.parentSetId ? "pl-4 opacity-80" : ""}>
-                    {s.parentSetId ? "↳ drop" : `#${s.setNo}`} · {s.weightKg} kg × {s.reps}
-                    {partnerOf(s) && <span className="ml-2 rounded bg-current/10 px-1.5 py-0.5 text-xs capitalize">SS ⇄ {partnerOf(s)}</span>}
-                  </span>
-                  <input type="hidden" name="setId" value={s.id} />
-                  <input type="hidden" name="workoutId" value={w.id} />
-                  <button className="px-2 opacity-50" aria-label="delete set">✕</button>
-                </form>
+                <div key={s.id} className="flex items-start justify-between text-sm">
+                  {/* Tap = edit (weight/reps/note), closed by default */}
+                  <details key={`${s.weightKg}-${s.reps}-${s.note}`} className="min-w-0 flex-1">
+                    <summary className="cursor-pointer list-none py-1">
+                      <span className={s.parentSetId ? "pl-4 opacity-80" : ""}>
+                        {s.parentSetId ? "↳ drop" : `#${s.setNo}`} · {s.weightKg} kg × {s.reps}
+                        {partnerOf(s) && <span className="ml-2 rounded bg-current/10 px-1.5 py-0.5 text-xs capitalize">SS ⇄ {partnerOf(s)}</span>}
+                        <span className="ml-2 text-xs opacity-30" aria-label="edit set">✎</span>
+                      </span>
+                      {s.note && <span className="block pl-4 text-xs italic opacity-60">&ldquo;{s.note}&rdquo;</span>}
+                    </summary>
+                    <form action={editSet} className="my-1 space-y-2 rounded-lg border border-current/15 p-3">
+                      <input type="hidden" name="setId" value={s.id} />
+                      <input type="hidden" name="workoutId" value={w.id} />
+                      <div className="flex gap-2">
+                        <input name="weight" type="number" inputMode="decimal" step="0.5" min="0" required defaultValue={s.weightKg} aria-label="Weight (kg)" className={input} />
+                        <input name="reps" type="number" inputMode="numeric" min="1" required defaultValue={s.reps} aria-label="Reps" className={input} />
+                      </div>
+                      <input name="note" maxLength={500} defaultValue={s.note ?? ""} placeholder="Note (optional)" aria-label="Set note" className={input} />
+                      <button className="w-full rounded-lg bg-foreground p-2 font-semibold text-background">Save</button>
+                    </form>
+                  </details>
+                  <form action={removeSet}>
+                    <input type="hidden" name="setId" value={s.id} />
+                    <input type="hidden" name="workoutId" value={w.id} />
+                    <button className="px-2 py-1 opacity-50" aria-label="delete set">✕</button>
+                  </form>
+                </div>
               ))}
             </div>
           ))}
         </>
       )}
+
+      {/* Workout notes: sabse neeche, collapsed — logging ke raaste me nahi */}
+      <details key={w.notes ?? ""} className="mt-8 text-sm">
+        <summary className="cursor-pointer list-none opacity-60">
+          Workout notes{w.notes ? ` · ${w.notes.slice(0, 40)}${w.notes.length > 40 ? "…" : ""}` : ""}
+        </summary>
+        <form action={saveWorkoutNotes} className="mt-2 space-y-2">
+          <input type="hidden" name="workoutId" value={w.id} />
+          <textarea name="notes" rows={3} maxLength={500} defaultValue={w.notes ?? ""} placeholder="How did the session go?" aria-label="Workout notes" className={input} />
+          <button className="w-full rounded-lg bg-foreground p-2 font-semibold text-background">Save notes</button>
+        </form>
+      </details>
 
       {exercise && !picking && (
         <div className="fixed inset-x-0 bottom-0 border-t border-current/20 bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

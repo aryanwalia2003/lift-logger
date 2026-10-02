@@ -32,4 +32,5 @@ export const sets = sqliteTable("sets", {
   parentSetId: integer("parent_set_id").references((): AnySQLiteColumn => sets.id),
   // Superset: ek round ke dono sets ka same id
   supersetId: integer("superset_id"),
+  note: text("note"), // optional, edit se hi set hota hai
 });

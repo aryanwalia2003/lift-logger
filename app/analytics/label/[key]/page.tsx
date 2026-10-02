@@ -20,7 +20,7 @@ export default async function LabelPage({ params, searchParams }: { params: Prom
     <>
       <h1 className="mt-3 text-2xl font-bold">{LABELS[label].name}</h1>
       <RangeTabs base={base} current={range} />
-      {!l ? <Card title="Kuch nahi mila"><Empty>Is range me {LABELS[label].name} nahi hua.</Empty></Card> : (
+      {!l ? <Card title="Nothing found"><Empty>No {LABELS[label].name} sessions in this range.</Empty></Card> : (
         <>
           <Stats items={[
             ["Sessions", String(l.count)],
@@ -31,10 +31,10 @@ export default async function LabelPage({ params, searchParams }: { params: Prom
           <Card title="Volume per session" sub="Weight × reps, kg">
             <LineChart points={ss.map((s) => ({ x: s.date, y: s.volume }))} />
           </Card>
-          <Card title="Body parts trained" sub="Total sets — label ke andar bhi alag parts">
+          <Card title="Body parts trained" sub="Total sets per body part in this label">
             <HBars rows={byPart(rows).map((p) => ({ label: p.name, value: p.sets, href: `/analytics/part/${p.id}`, color: PART_COLOR[p.name] }))} />
           </Card>
-          <Card title="Top exercises" sub="Sets ke hisaab se">
+          <Card title="Top exercises" sub="By number of sets">
             <HBars rows={byExercise(rows).slice(0, 8).map((e) => ({ label: e.name, value: e.sets, href: `/analytics/exercise/${e.id}` }))} />
           </Card>
           <Card title="Sessions">

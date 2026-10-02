@@ -10,7 +10,7 @@ export type Row = {
   exerciseId: number; exercise: string;
   partId: number; part: string; topId: number; top: string;
   setNo: number; weight: number; reps: number;
-  isDrop: boolean; supersetId: number | null;
+  isDrop: boolean; supersetId: number | null; note: string | null;
 };
 
 export const vol = (r: Row) => r.weight * r.reps;
@@ -40,7 +40,7 @@ export async function loadRows(): Promise<Row[]> {
       workoutId: workouts.id, date: workouts.date, label: workouts.label,
       exerciseId: exercises.id, exercise: exercises.name, bodyPartId: exercises.bodyPartId,
       setNo: sets.setNo, weight: sets.weightKg, reps: sets.reps,
-      parentSetId: sets.parentSetId, supersetId: sets.supersetId,
+      parentSetId: sets.parentSetId, supersetId: sets.supersetId, note: sets.note,
     })
     .from(sets)
     .innerJoin(workouts, eq(sets.workoutId, workouts.id))

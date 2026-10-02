@@ -53,6 +53,18 @@ process.env.DATABASE_URL = `file:${join(dir, "a.db")}`; // libsql :memory: me tr
   await assert.rejects(w.addRound(dropW.id, [{ exerciseId: lat, weightKg: 8, reps: 12 }, { exerciseId: push, weightKg: 25, reps: 0 }]));
   assert.equal((await w.workoutSets(dropW.id)).length, before); // bad round se kuch insert nahi hua
 
+  // edit + notes
+  const [first] = await w.workoutSets(dropW.id);
+  const upd = await w.updateSet(first.id, 62.5, 7, "  felt heavy  ");
+  assert.deepEqual([upd.weightKg, upd.reps, upd.note], [62.5, 7, "felt heavy"]); // note trim hua
+  assert.equal((await w.updateSet(first.id, 62.5, 7, "   ")).note, null); // khali note = null
+  await assert.rejects(w.updateSet(first.id, 62.5, 0, "")); // bad reps
+  await assert.rejects(w.updateSet(first.id, 62.5, 7, "x".repeat(501))); // note lamba
+  await assert.rejects(w.updateSet(999999, 50, 5, "")); // set nahi mila
+  await w.updateSet(first.id, 60, 8, "felt heavy"); // wapas 60×8 (aage ke asserts ke liye)
+  assert.equal((await w.setWorkoutNotes(dropW.id, " slept badly ")).notes, "slept badly");
+  await assert.rejects(w.setWorkoutNotes(999999, "x"));
+
   const rows = await a.loadRows();
   const mine = rows.filter((r) => r.exerciseId === inc);
   assert.deepEqual(a.exerciseSessions(mine).map((s) => s.pr), [false, false, false, true]);

@@ -13,7 +13,7 @@ export default async function Home() {
         <h1 className="mb-1 text-2xl font-bold">Start workout</h1>
         <Link href="/analytics" className="text-sm font-semibold underline">Analytics →</Link>
       </div>
-      <p className="mb-4 text-sm opacity-60">Aaj ka din kaunsa hai?</p>
+      <p className="mb-4 text-sm opacity-60">What kind of day is it?</p>
       <form action={startWorkout} className="grid grid-cols-2 gap-3">
         {LABEL_KEYS.map((k) => (
           <button key={k} name="label" value={k} className="rounded-xl border border-current/20 p-5 text-lg font-semibold active:bg-current/10">

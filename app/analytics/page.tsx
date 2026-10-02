@@ -21,7 +21,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
     <>
       <h1 className="mt-3 text-2xl font-bold">Analytics</h1>
       <RangeTabs base="/analytics" current={range} />
-      {rows.length === 0 ? <Card title="Kuch nahi mila"><Empty /></Card> : (
+      {rows.length === 0 ? <Card title="Nothing found"><Empty /></Card> : (
         <>
           <Stats items={[
             ["Workouts", String(s.workouts)],
@@ -30,16 +30,16 @@ export default async function Overview({ searchParams }: { searchParams: Promise
             ["Volume", kg(s.volume)],
           ]} />
 
-          <Card title="Schedule" sub="Aakhri 8 hafte — kis din kya kiya">
+          <Card title="Schedule" sub="Last 8 weeks — what you trained each day">
             <ScheduleGrid weeks={schedule(all, 8)} today={today()} />
           </Card>
 
-          <Card title="Weekly sets" sub="Body part ke hisaab se">
+          <Card title="Weekly sets" sub="By body part">
             <Bars data={wk.map((w) => ({ x: shortDate(w.week), tip: `Week of ${shortDate(w.week)}`, segs: partKeys.map((k) => ({ key: k, v: w.parts[k] ?? 0 })) }))} unit=" sets" />
             <Legend keys={partKeys} />
           </Card>
 
-          <Card title="Sessions by label" sub="Tap karke label ka analysis dekho">
+          <Card title="Sessions by label" sub="Tap a label for its analysis">
             <HBars rows={byLabel(rows).map((l) => ({ label: LABELS[l.label].name, value: l.count, href: `/analytics/label/${l.label}`, sub: `avg ${Math.round(l.avgSets)} sets · ${l.everyDays ? `every ${l.everyDays.toFixed(1)} days` : "once"}` }))} />
           </Card>
 
@@ -53,8 +53,8 @@ export default async function Overview({ searchParams }: { searchParams: Promise
             </Card>
           )}
 
-          <Card title="Recent PRs" sub="Estimated 1RM ka naya best">
-            {recentPrs.length === 0 ? <Empty>Is range me koi PR nahi.</Empty> : (
+          <Card title="Recent PRs" sub="New estimated 1RM best">
+            {recentPrs.length === 0 ? <Empty>No PRs in this range.</Empty> : (
               <ul className="divide-y divide-current/10">
                 {recentPrs.map((p) => (
                   <li key={p.exerciseId + p.date}>
@@ -70,7 +70,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
         </>
       )}
 
-      <Card title="Exercises" sub="Body part kholo, exercise tap karo">
+      <Card title="Exercises" sub="Open a body part, then tap an exercise">
         {exs.length === 0 ? <Empty /> : byPart(all).map((p) => (
           <details key={p.id} className="border-b border-current/10 py-1 last:border-0">
             <summary className="flex cursor-pointer items-center gap-2 py-2 text-sm capitalize">
