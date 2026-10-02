@@ -15,7 +15,7 @@ const input = "w-full min-w-0 rounded-lg border border-current/30 bg-transparent
 export default async function Workout({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Q> }) {
   const { id } = await params;
   const q = await searchParams;
-  const w = getWorkout(Number(id));
+  const w = await getWorkout(Number(id));
   if (!w) notFound();
 
   const base = `/workout/${w.id}`;
@@ -25,19 +25,24 @@ export default async function Workout({ params, searchParams }: { params: Promis
   };
   const picking = !!q.pick && !!q.ex; // superset partner chun rahe hain
 
-  const { suggested, others } = orderedBodyParts(w.label);
-  const exList = q.bp ? exercisesOf(Number(q.bp)) : [];
-  const exercise = q.ex ? getExercise(Number(q.ex)) : undefined;
-  const partner = exercise && q.ss ? getExercise(Number(q.ss)) : undefined;
-  const logged = workoutSets(w.id);
+  // Turso network latency — independent queries ek saath
+  const [{ suggested, others }, exList, exercise, logged] = await Promise.all([
+    orderedBodyParts(w.label),
+    q.bp ? exercisesOf(Number(q.bp)) : Promise.resolve([]),
+    q.ex ? getExercise(Number(q.ex)) : Promise.resolve(undefined),
+    workoutSets(w.id),
+  ]);
+  const partner = exercise && q.ss ? await getExercise(Number(q.ss)) : undefined;
   const doneCount = (eid: number) => logged.filter((s) => s.exerciseId === eid && !s.parentSetId).length;
   const hasSets = !!exercise && doneCount(exercise.id) > 0;
   const dropMode = q.mode === "drop" && hasSets && !partner;
 
   // Prefill: normal → last main set; drop → is workout ka latest set ka ~80%
-  const prev = exercise && lastSet(exercise.id);
-  const dropFrom = dropMode ? latestInWorkout(w.id, exercise!.id) : undefined;
-  const prevB = partner && lastSet(partner.id);
+  const [prev, dropFrom, prevB] = await Promise.all([
+    exercise ? lastSet(exercise.id) : undefined,
+    dropMode ? latestInWorkout(w.id, exercise!.id) : undefined,
+    partner ? lastSet(partner.id) : undefined,
+  ]);
   const fillW = dropFrom ? Math.round(dropFrom.weightKg * 0.8 * 2) / 2 : prev?.weightKg;
   const fillR = dropFrom ? dropFrom.reps : prev?.reps;
 
@@ -116,7 +121,7 @@ export default async function Workout({ params, searchParams }: { params: Promis
       )}
 
       {exercise && !picking && (
-        <div className="fixed inset-x-0 bottom-0 border-t border-current/20 bg-background p-4">
+        <div className="fixed inset-x-0 bottom-0 border-t border-current/20 bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="mx-auto max-w-md">
             <div className="mb-2 flex gap-1 rounded-lg border border-current/15 p-1">
               {mode("Set", href({ bp: q.bp, ex: q.ex }), !dropMode && !partner)}

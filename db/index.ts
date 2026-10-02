@@ -1,7 +1,10 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-export const sqlite = new Database(process.env.DB_FILE ?? "lift.db");
-sqlite.pragma("foreign_keys = ON");
-export const db = drizzle(sqlite, { schema });
+// Local: file:lift.db — Vercel pe Turso URL + token env se
+export const client = createClient({
+  url: process.env.DATABASE_URL ?? "file:lift.db",
+  authToken: process.env.DATABASE_AUTH_TOKEN,
+});
+export const db = drizzle(client, { schema });

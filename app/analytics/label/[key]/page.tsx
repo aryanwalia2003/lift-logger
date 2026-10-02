@@ -11,7 +11,7 @@ export default async function LabelPage({ params, searchParams }: { params: Prom
   if (!(key in LABELS)) notFound();
   const label = key as Label;
   const range = parseRange((await searchParams).range);
-  const rows = inRange(loadRows().filter((r) => r.label === label), range);
+  const rows = inRange((await loadRows()).filter((r) => r.label === label), range);
   const ss = sessions(rows);
   const l = byLabel(rows)[0];
   const base = `/analytics/label/${label}`;

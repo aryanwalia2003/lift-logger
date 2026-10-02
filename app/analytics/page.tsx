@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Overview({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
   const range = parseRange((await searchParams).range);
-  const all = loadRows();
+  const all = await loadRows();
   const rows = inRange(all, range);
   const s = summary(rows, range);
   const parts = byPart(rows);

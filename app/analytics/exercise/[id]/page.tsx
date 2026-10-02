@@ -10,10 +10,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ExercisePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ range?: string }> }) {
   const id = Number((await params).id);
-  const ex = db.select().from(exercises).where(eq(exercises.id, id)).get();
+  const ex = await db.select().from(exercises).where(eq(exercises.id, id)).get();
   if (!ex) notFound();
   const range = parseRange((await searchParams).range);
-  const mine = loadRows().filter((r) => r.exerciseId === id);
+  const mine = (await loadRows()).filter((r) => r.exerciseId === id);
   const all = exerciseSessions(mine); // PR flag poori history se
   const ss = inRange(all, range);
   const rows = inRange(mine, range);

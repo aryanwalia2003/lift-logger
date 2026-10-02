@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { LABELS, LABEL_KEYS } from "@/lib/catalog";
 import { startWorkout } from "@/lib/actions";
+import { logout } from "@/lib/auth-actions";
 import { recentWorkouts } from "@/lib/workouts";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
+export default async function Home() {
   return (
     <main className="mx-auto w-full max-w-md p-4">
       <div className="flex items-baseline justify-between">
@@ -22,7 +23,7 @@ export default function Home() {
       </form>
       <h2 className="mb-2 mt-8 text-sm font-semibold uppercase opacity-60">Recent</h2>
       <ul className="space-y-2">
-        {recentWorkouts().map((w) => (
+        {(await recentWorkouts()).map((w) => (
           <li key={w.id}>
             <Link href={`/workout/${w.id}`} className="flex justify-between rounded-lg border border-current/20 p-3">
               <span>{LABELS[w.label].name}</span>
@@ -31,6 +32,7 @@ export default function Home() {
           </li>
         ))}
       </ul>
+      <form action={logout} className="mt-8 text-center"><button className="text-xs underline opacity-50">Logout</button></form>
     </main>
   );
 }

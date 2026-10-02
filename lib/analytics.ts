@@ -33,9 +33,9 @@ export function groupBy<T, K>(a: T[], f: (t: T) => K) {
 export const countBy = <T>(a: T[], f: (t: T) => string) =>
   Object.fromEntries([...groupBy(a, f)].map(([k, v]) => [k, v.length])) as Record<string, number>;
 
-export function loadRows(): Row[] {
-  const parts = new Map(db.select().from(bodyParts).all().map((p) => [p.id, p]));
-  return db
+export async function loadRows(): Promise<Row[]> {
+  const parts = new Map((await db.select().from(bodyParts).all()).map((p) => [p.id, p]));
+  const data = await db
     .select({
       workoutId: workouts.id, date: workouts.date, label: workouts.label,
       exerciseId: exercises.id, exercise: exercises.name, bodyPartId: exercises.bodyPartId,
@@ -46,15 +46,15 @@ export function loadRows(): Row[] {
     .innerJoin(workouts, eq(sets.workoutId, workouts.id))
     .innerJoin(exercises, eq(sets.exerciseId, exercises.id))
     .orderBy(workouts.date, workouts.id, sets.id)
-    .all()
-    .map(({ bodyPartId, parentSetId, ...r }) => {
+    .all();
+  return data.map(({ bodyPartId, parentSetId, ...r }) => {
       const leaf = parts.get(bodyPartId)!;
       const top = parts.get(leaf.parentId ?? leaf.id)!;
       return { ...r, isDrop: parentSetId !== null, partId: leaf.id, part: leaf.name, topId: top.id, top: top.name };
     });
 }
 
-export const partName = (id: number) => db.select().from(bodyParts).where(eq(bodyParts.id, id)).get()?.name;
+export const partName = async (id: number) => (await db.select().from(bodyParts).where(eq(bodyParts.id, id)).get())?.name;
 
 // ---- dates (sab YYYY-MM-DD, UTC math) ----
 export const today = () => new Date().toLocaleDateString("en-CA");

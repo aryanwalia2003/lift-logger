@@ -8,10 +8,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PartPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ range?: string }> }) {
   const id = Number((await params).id);
-  const name = partName(id);
+  const name = await partName(id);
   if (!name) notFound();
   const range = parseRange((await searchParams).range);
-  const mine = loadRows().filter((r) => r.topId === id || r.partId === id);
+  const mine = (await loadRows()).filter((r) => r.topId === id || r.partId === id);
   const rows = inRange(mine, range);
   const s = summary(rows, range);
   const subs = [...new Set(rows.map((r) => r.part))]; // shoulders → front/side delt
