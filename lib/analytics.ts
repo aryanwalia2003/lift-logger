@@ -10,11 +10,15 @@ export type Row = {
   exerciseId: number; exercise: string;
   partId: number; part: string; topId: number; top: string;
   setNo: number; weight: number; reps: number;
+  isDrop: boolean; supersetId: number | null;
 };
 
 export const vol = (r: Row) => r.weight * r.reps;
 export const e1rm = (r: Row) => r.weight * (1 + r.reps / 30); // Epley
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+// Drop set alag "set" nahi — parent set ka hissa. Volume me count, sets/e1RM/rep-range me nahi
+const work = (rs: Row[]) => rs.filter((r) => !r.isDrop);
+const nSets = (rs: Row[]) => work(rs).length;
 
 export function groupBy<T, K>(a: T[], f: (t: T) => K) {
   const m = new Map<K, T[]>();
@@ -36,16 +40,17 @@ export function loadRows(): Row[] {
       workoutId: workouts.id, date: workouts.date, label: workouts.label,
       exerciseId: exercises.id, exercise: exercises.name, bodyPartId: exercises.bodyPartId,
       setNo: sets.setNo, weight: sets.weightKg, reps: sets.reps,
+      parentSetId: sets.parentSetId, supersetId: sets.supersetId,
     })
     .from(sets)
     .innerJoin(workouts, eq(sets.workoutId, workouts.id))
     .innerJoin(exercises, eq(sets.exerciseId, exercises.id))
     .orderBy(workouts.date, workouts.id, sets.id)
     .all()
-    .map(({ bodyPartId, ...r }) => {
+    .map(({ bodyPartId, parentSetId, ...r }) => {
       const leaf = parts.get(bodyPartId)!;
       const top = parts.get(leaf.parentId ?? leaf.id)!;
-      return { ...r, partId: leaf.id, part: leaf.name, topId: top.id, top: top.name };
+      return { ...r, isDrop: parentSetId !== null, partId: leaf.id, part: leaf.name, topId: top.id, top: top.name };
     });
 }
 
@@ -74,7 +79,7 @@ export const weeksIn = (rows: Row[], r: Range) =>
 export function sessions(rows: Row[]) {
   return [...groupBy(rows, (r) => r.workoutId)]
     .map(([id, rs]) => ({
-      id, date: rs[0].date, label: rs[0].label, sets: rs.length,
+      id, date: rs[0].date, label: rs[0].label, sets: nSets(rs),
       volume: sum(rs.map(vol)), parts: countBy(rs, (r) => r.top),
     }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
@@ -87,7 +92,7 @@ export function weekly(rows: Row[], weeks: number, key: (r: Row) => string = (r)
   return Array.from({ length: weeks }, (_, i) => {
     const week = addDays(end, -7 * (weeks - 1 - i));
     const rs = byWeek.get(week) ?? [];
-    return { week, workouts: new Set(rs.map((r) => r.workoutId)).size, sets: rs.length, volume: sum(rs.map(vol)), parts: countBy(rs, key) };
+    return { week, workouts: new Set(rs.map((r) => r.workoutId)).size, sets: nSets(rs), volume: sum(rs.map(vol)), parts: countBy(rs, key) };
   });
 }
 
@@ -95,7 +100,9 @@ export function summary(rows: Row[], range: Range) {
   const ss = sessions(rows);
   return {
     workouts: ss.length,
-    sets: rows.length,
+    sets: nSets(rows),
+    drops: rows.length - nSets(rows),
+    rounds: new Set(rows.flatMap((r) => (r.supersetId ? [r.supersetId] : []))).size,
     volume: sum(rows.map(vol)),
     perWeek: ss.length / weeksIn(rows, range),
     last: ss.at(-1)?.date,
@@ -126,7 +133,7 @@ export function byLabel(rows: Row[]) {
 export function byPart(rows: Row[]) {
   return [...groupBy(rows, (r) => r.topId)]
     .map(([id, rs]) => ({
-      id, name: rs[0].top, sets: rs.length, volume: sum(rs.map(vol)),
+      id, name: rs[0].top, sets: nSets(rs), volume: sum(rs.map(vol)),
       sessions: new Set(rs.map((r) => r.workoutId)).size, last: rs.at(-1)!.date,
     }))
     .sort((a, b) => b.sets - a.sets);
@@ -137,8 +144,9 @@ export function exerciseSessions(rows: Row[]) {
   let best = 0;
   return [...groupBy(rows, (r) => r.workoutId)]
     .map(([id, rs]) => {
-      const top = rs.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a));
-      return { id, date: rs[0].date, sets: rs, volume: sum(rs.map(vol)), topWeight: Math.max(...rs.map((r) => r.weight)), e1rm: e1rm(top), best: top };
+      const ws = work(rs).length ? work(rs) : rs; // e1RM/top weight sirf main sets se
+      const top = ws.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a));
+      return { id, date: rs[0].date, sets: rs, volume: sum(rs.map(vol)), topWeight: Math.max(...ws.map((r) => r.weight)), e1rm: e1rm(top), best: top };
     })
     .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
     .map((s, i) => {
@@ -154,7 +162,7 @@ export function byExercise(rows: Row[]) {
       const ss = exerciseSessions(rs);
       return {
         id, name: rs[0].exercise, part: rs[0].part, top: rs[0].top, topId: rs[0].topId,
-        sets: rs.length, sessions: ss.length, last: ss.at(-1)!.date,
+        sets: nSets(rs), sessions: ss.length, last: ss.at(-1)!.date,
         bestE1rm: Math.max(...ss.map((s) => s.e1rm)),
         change: ss.length > 1 ? (ss.at(-1)!.e1rm / ss[0].e1rm - 1) * 100 : null, // % e1RM, is range me
       };
@@ -172,4 +180,10 @@ export function prs(all: Row[]) {
 export const REP_BUCKETS: [string, (r: number) => boolean][] = [
   ["1–5", (r) => r <= 5], ["6–8", (r) => r >= 6 && r <= 8], ["9–12", (r) => r >= 9 && r <= 12], ["13+", (r) => r >= 13],
 ];
-export const repBuckets = (rows: Row[]) => REP_BUCKETS.map(([label, f]) => ({ label, value: rows.filter((r) => f(r.reps)).length }));
+export const repBuckets = (rows: Row[]) => REP_BUCKETS.map(([label, f]) => ({ label, value: work(rows).filter((r) => f(r.reps)).length }));
+
+// Superset pairs: kaunsi exercises saath me kitne rounds
+export function supersetPairs(rows: Row[]) {
+  const rounds = [...groupBy(rows.filter((r) => r.supersetId), (r) => r.supersetId)].map(([, rs]) => rs.map((r) => r.exercise).sort().join(" + "));
+  return Object.entries(countBy(rounds, (k) => k)).map(([pair, rounds]) => ({ pair, rounds })).sort((a, b) => b.rounds - a.rounds);
+}

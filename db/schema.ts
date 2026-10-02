@@ -28,4 +28,8 @@ export const sets = sqliteTable("sets", {
   setNo: integer("set_no").notNull(),
   weightKg: real("weight_kg").notNull(),
   reps: integer("reps").notNull(),
+  // Drop set: parent main set ka id (drop = parent ke baad bina rest ke kam weight)
+  parentSetId: integer("parent_set_id").references((): AnySQLiteColumn => sets.id),
+  // Superset: ek round ke dono sets ka same id
+  supersetId: integer("superset_id"),
 });

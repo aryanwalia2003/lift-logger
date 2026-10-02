@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LABELS, PART_COLOR } from "@/lib/catalog";
-import { byExercise, byLabel, byPart, inRange, loadRows, parseRange, prs, schedule, summary, today, weekly, weeksIn } from "@/lib/analytics";
+import { byExercise, byLabel, byPart, inRange, loadRows, parseRange, prs, schedule, summary, supersetPairs, today, weekly, weeksIn } from "@/lib/analytics";
 import { Bars, Card, Empty, HBars, Legend, RangeTabs, ScheduleGrid, Stats, kg, shortDate } from "./ui";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +46,12 @@ export default async function Overview({ searchParams }: { searchParams: Promise
           <Card title="Sets by body part">
             <HBars rows={parts.map((p) => ({ label: p.name, value: p.sets, href: `/analytics/part/${p.id}`, color: PART_COLOR[p.name], sub: `${p.sessions} sessions · last ${shortDate(p.last)}` }))} />
           </Card>
+
+          {(s.drops > 0 || s.rounds > 0) && (
+            <Card title="Drop sets & supersets" sub={`${s.drops} drop sets · ${s.rounds} superset rounds`}>
+              {s.rounds > 0 && <HBars rows={supersetPairs(rows).slice(0, 6).map((p) => ({ label: p.pair, value: p.rounds }))} unit=" rounds" />}
+            </Card>
+          )}
 
           <Card title="Recent PRs" sub="Estimated 1RM ka naya best">
             {recentPrs.length === 0 ? <Empty>Is range me koi PR nahi.</Empty> : (

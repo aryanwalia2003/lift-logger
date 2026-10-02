@@ -34,13 +34,30 @@ process.env.DB_FILE = ":memory:";
   const old = w.createWorkout("LEG_DAY", "2020-01-01");
   w.addSet(old.id, ex("squats").id, 40, 5);
 
+  // drop set + superset
+  const lat = ex("side lateral raises").id;
+  const dropW = w.createWorkout("PUSH", "2026-09-15");
+  w.addSet(dropW.id, inc, 60, 8);
+  w.addSet(dropW.id, inc, 45, 10, { drop: true });
+  assert.throws(() => w.addSet(dropW.id, lat, 10, 10, { drop: true })); // main set ke bina drop nahi
+  const rd = w.addRound(dropW.id, [{ exerciseId: lat, weightKg: 8, reps: 12 }, { exerciseId: ex("v-bar pushdowns").id, weightKg: 25, reps: 12 }]);
+  assert.equal(rd[0].supersetId, rd[1].supersetId);
+  assert.throws(() => w.addRound(dropW.id, [{ exerciseId: lat, weightKg: 8, reps: 12 }, { exerciseId: lat, weightKg: 8, reps: 12 }]));
+  const before = w.workoutSets(dropW.id).length;
+  assert.throws(() => w.addRound(dropW.id, [{ exerciseId: lat, weightKg: 8, reps: 12 }, { exerciseId: ex("v-bar pushdowns").id, weightKg: 25, reps: 0 }]));
+  assert.equal(w.workoutSets(dropW.id).length, before); // bad round se kuch insert nahi hua
+
   const rows = a.loadRows();
   const mine = rows.filter((r) => r.exerciseId === inc);
-  assert.deepEqual(a.exerciseSessions(mine).map((s) => s.pr), [false, false, true]);
-  assert.equal(a.exerciseSessions(mine)[0].volume, 840);
+  assert.deepEqual(a.exerciseSessions(mine).map((s) => s.pr), [false, false, false, true]);
+  assert.equal(a.exerciseSessions(mine)[0].volume, 930); // 60×8 + drop 45×10 volume me
   assert.equal(a.prs(rows).length, 2); // incline + squats (2020 se zyada)
   assert.equal(a.byLabel(rows).find((l) => l.label === "CHEST_DAY")!.count, 1);
-  assert.equal(a.byPart(rows).find((p) => p.name === "chest")!.sets, 4);
+  assert.equal(a.byPart(rows).find((p) => p.name === "chest")!.sets, 5); // drop alag set nahi;
+  const sm = a.summary(rows, "all");
+  assert.equal(sm.drops, 1);
+  assert.equal(sm.rounds, 1);
+  assert.equal(a.supersetPairs(rows)[0].pair, "side lateral raises + v-bar pushdowns");
   assert.equal(a.weekStart("2026-10-01"), "2026-09-28");
   const thisWeek = rows.filter((r) => a.weekStart(r.date) === a.weekStart(a.today())).length;
   assert.equal(a.weekly(rows, 3).at(-1)!.sets, thisWeek);

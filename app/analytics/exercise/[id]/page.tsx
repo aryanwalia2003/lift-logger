@@ -43,13 +43,13 @@ export default async function ExercisePage({ params, searchParams }: { params: P
           <Card title="Rep ranges" sub="Total sets">
             <HBars rows={repBuckets(rows)} />
           </Card>
-          <Card title="History" sub="PR = naya estimated 1RM best">
+          <Card title="History" sub="PR = naya estimated 1RM best · ↳ = drop set, SS = superset">
             <ul className="divide-y divide-current/10">
               {[...ss].reverse().slice(0, 20).map((s) => (
                 <li key={s.id}>
                   <Link href={`/workout/${s.id}`} className="block py-2 text-sm">
-                    <span className="flex justify-between"><span>{shortDate(s.date)}</span>{s.pr && <span className="font-semibold">🏆 PR</span>}</span>
-                    <span className="text-xs opacity-60">{s.sets.map((r) => `${r.weight}×${r.reps}`).join(" · ")}</span>
+                    <span className="flex justify-between"><span>{shortDate(s.date)}{s.sets.some((r) => r.supersetId) && <span className="ml-2 rounded bg-current/10 px-1.5 py-0.5 text-xs">SS</span>}</span>{s.pr && <span className="font-semibold">🏆 PR</span>}</span>
+                    <span className="text-xs opacity-60">{s.sets.map((r) => `${r.isDrop ? "↳" : ""}${r.weight}×${r.reps}`).join(" · ")}</span>
                   </Link>
                 </li>
               ))}
