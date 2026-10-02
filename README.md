@@ -2,18 +2,20 @@
 
 Personal workout tracker + analysis. Next.js (App Router) + Drizzle + libSQL (local file ya Turso). PWA, single-password gate.
 
-- `lib/catalog.ts` — body parts, exercises, day labels (seed data). Edit karo, phir `pnpm db:seed`
-- `db/schema.ts` — `body_parts` → `exercises`; `workouts` (date, label) → `sets`
-- Drop set = parent set se attach (sets count nahi, volume count); superset = same `supersetId` wale sets ka round
-- `lib/analytics.ts` — saari analytics ek flat rows list se (weekly, byLabel, byPart, exercise sessions + PRs)
-- `app/analytics/` — overview, label, body part, exercise pages (SVG charts, no chart lib)
+- **Offline-first:** device pe IndexedDB (Dexie) poora data rakhta hai; logging aur analytics server ke bina chalte hain.
+- `lib/catalog.ts` — body parts, exercises (ids deterministic, client+server same), day labels
+- `lib/local-db.ts` + `lib/store.ts` — local DB + saari reads/writes (dirty=1, soft delete)
+- `lib/sync.ts` (client) + `lib/sync-server.ts` + `app/api/sync` — push dirty rows, pull by rev cursor; last-write-wins (updatedAt), tombstones
+- `public/sw.js` — service worker: pages + JS cache (offline shell)
+- `db/schema.ts` — server tables (Turso): ids client banata hai (text), `rev` = sync cursor
+- `lib/analytics.ts` — pure functions on rows; `app/analytics/` — pages (query params: `?key=`, `?id=`)
 
 ## Local
 ```
-pnpm db:migrate && pnpm db:seed   # lift.db banao (DATABASE_URL na ho to file:lift.db)
+pnpm db:migrate && pnpm db:seed   # server DB (DATABASE_URL na ho to file:lift.db)
 pnpm check                        # smoke test (temp DB, backup/restore roundtrip bhi)
 pnpm dev
-DATABASE_URL=file:demo.db pnpm tsx scripts/demo.ts   # demo data
+DATABASE_URL=file:demo.db pnpm tsx scripts/demo.ts   # demo data server pe; app kholte hi sync se aata hai
 ```
 
 ## Deploy (Vercel + Turso)

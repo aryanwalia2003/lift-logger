@@ -42,3 +42,24 @@ export const PART_COLOR: Record<string, string> = {
   chest: "var(--s1)", back: "var(--s2)", shoulders: "var(--s3)", tricep: "var(--s4)",
   bicep: "var(--s5)", legs: "var(--s6)", "front delt": "var(--s3)", "side delt": "var(--s7)",
 };
+
+// ---- Catalog rows: ids deterministic (client aur server dono same), DB ke autoincrement order jaisa ----
+export type BodyPartRow = { id: number; name: string; parentId: number | null };
+export type ExerciseRow = { id: number; name: string; bodyPartId: number };
+
+export const PART_ROWS: BodyPartRow[] = (() => {
+  const ordered = [...BODY_PARTS.filter((p) => !p.parent), ...BODY_PARTS.filter((p) => p.parent)]; // top-level pehle
+  const idOf = (name: string) => ordered.findIndex((p) => p.name === name) + 1;
+  return ordered.map((p, i) => ({ id: i + 1, name: p.name, parentId: p.parent ? idOf(p.parent) : null }));
+})();
+
+export const EXERCISE_ROWS: ExerciseRow[] = Object.entries(EXERCISES)
+  .flatMap(([part, names]) => names.map((name) => ({ name, bodyPartId: PART_ROWS.find((p) => p.name === part)!.id })))
+  .map((e, i) => ({ id: i + 1, ...e }));
+
+export const partById = (id: number) => PART_ROWS.find((p) => p.id === id);
+export const exerciseById = (id: number) => EXERCISE_ROWS.find((e) => e.id === id);
+export const topPartOf = (id: number) => {
+  const p = partById(id)!;
+  return p.parentId ? partById(p.parentId)! : p;
+};

@@ -1,11 +1,14 @@
-// Demo data (demo.db) — UI/analytics dekhne ke liye. Chalao: DATABASE_URL=file:demo.db pnpm tsx scripts/demo.ts
+// Demo data → server DB (demo.db). App kholte hi sync se device me aa jaata hai.
+// Chalao: DATABASE_URL=file:demo.db pnpm tsx scripts/demo.ts  (phir DATABASE_URL=file:demo.db pnpm dev)
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { db } from "@/db";
 import { seed } from "@/db/seed";
 import { addDays, today } from "@/lib/analytics";
-import { addRound, addSet, createWorkout, exerciseByName } from "@/lib/workouts";
-import type { Label } from "@/lib/catalog";
-
+import { EXERCISE_ROWS, type Label } from "@/lib/catalog";
+import { newId } from "@/lib/store";
+import { applySync } from "@/lib/sync-server";
+import { MAX_PUSH } from "@/lib/sync-limits";
+import type { SetRow, WorkoutRow } from "@/lib/types";
 
 // [exercise, start kg, +kg per week]
 const PLAN: Record<string, [string, number, number][]> = {
@@ -17,28 +20,40 @@ const PLAN: Record<string, [string, number, number][]> = {
 // Superset wale din: do exercises alternate
 const SUPERSET: Partial<Record<Label, [string, string]>> = { PUSH: ["side lateral raises", "v-bar pushdowns"] };
 const WEEK: (Label | null)[] = ["PUSH", "PULL", "LEG_DAY", null, "CHEST_DAY", "PULL", null];
+const ex = (n: string) => EXERCISE_ROWS.find((e) => e.name === n)!.id;
+
 (async () => {
   await migrate(db, { migrationsFolder: "./drizzle" });
   await seed(db);
-  const id = async (n: string) => (await exerciseByName(n))!.id;
+  const ws: WorkoutRow[] = [], ss: SetRow[] = [];
+  const now = Date.now();
+  const set = (workoutId: string, exerciseId: number, setNo: number, weightKg: number, reps: number, extra: Partial<SetRow> = {}) =>
+    ss.push({ id: newId(), workoutId, exerciseId, setNo, weightKg, reps, parentSetId: null, supersetId: null, note: null, updatedAt: now, deletedAt: null, ...extra });
   const start = addDays(today(), -70);
   for (let d = 0; d <= 70; d++) {
-    const date = addDays(start, d);
     const label = WEEK[d % 7];
     if (!label || Math.random() < 0.12) continue; // kabhi miss bhi
-    const w = await createWorkout(label, date);
-    const ss = SUPERSET[label];
-    for (const [name, kg0, step] of PLAN[label]) {
-      if (ss?.includes(name)) continue; // superset me alag se
-      const kg = kg0 + step * Math.floor(d / 7);
-      for (let s = 0; s < 3; s++) await addSet(w.id, await id(name), kg, 10 - s - Math.floor(Math.random() * 2));
-      if (Math.random() < 0.3) await addSet(w.id, await id(name), Math.round(kg * 0.8 * 2) / 2, 8, { drop: true }); // kabhi drop bhi
+    const w: WorkoutRow = { id: newId(), date: addDays(start, d), label, notes: null, updatedAt: now, deletedAt: null };
+    ws.push(w);
+    const pair = SUPERSET[label];
+    const kg = (k0: number, step: number) => k0 + step * Math.floor(d / 7);
+    for (const [name, k0, step] of PLAN[label]) {
+      if (pair?.includes(name)) continue; // superset me alag se
+      for (let s = 1; s <= 3; s++) set(w.id, ex(name), s, kg(k0, step), 10 - s - Math.floor(Math.random() * 2));
+      if (Math.random() < 0.3) set(w.id, ex(name), 3, Math.round(kg(k0, step) * 0.8 * 2) / 2, 8, { parentSetId: ss.at(-1)!.id }); // kabhi drop bhi
     }
-    if (ss) {
-      const [a, b] = ss.map((n) => PLAN[label].find((p) => p[0] === n)!);
-      for (let r = 0; r < 3; r++)
-        await addRound(w.id, await Promise.all([a, b].map(async ([n, k0, st]) => ({ exerciseId: await id(n), weightKg: k0 + st * Math.floor(d / 7), reps: 12 - r }))));
+    if (pair) {
+      const [a, b] = pair.map((n) => PLAN[label].find((p) => p[0] === n)!);
+      for (let r = 1; r <= 3; r++) {
+        const supersetId = newId();
+        for (const [n, k0, step] of [a, b]) set(w.id, ex(n), r, kg(k0, step), 13 - r, { supersetId });
+      }
     }
   }
-  console.log("demo ok");
+  const all = [...ws, ...ss];
+  for (let i = 0; i < all.length; i += MAX_PUSH) {
+    const part = all.slice(i, i + MAX_PUSH);
+    await applySync(db, { since: 0, workouts: part.filter((r): r is WorkoutRow => "label" in r), sets: part.filter((r): r is SetRow => "exerciseId" in r) });
+  }
+  console.log(`demo ok — ${ws.length} workouts, ${ss.length} sets`);
 })();

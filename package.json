@@ -16,6 +16,8 @@
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
+    "dexie": "^4.4.6",
+    "dexie-react-hooks": "^4.4.0",
     "drizzle-orm": "^0.45.3",
     "next": "16.3.7",
     "react": "19.2.8",
@@ -29,6 +31,7 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.3.7",
+    "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

@@ -1,7 +1,7 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { db as Db } from "@/db";
-import { bodyParts, exercises, sets, workouts } from "@/db/schema";
+import { bodyParts, exercises, sets, syncState, workouts } from "@/db/schema";
 
 type DB = typeof Db;
 
@@ -31,4 +31,7 @@ export async function restore(db: DB, d: Dump) {
   await insertAll(db, exercises, d.exercises);
   await insertAll(db, workouts, d.workouts);
   await insertAll(db, sets, d.sets);
+  // Sync counter kabhi rows ke rev se peeche na ho, warna clients naye rows miss karenge
+  const maxRev = Math.max(0, ...d.workouts.map((r) => r.rev), ...d.sets.map((r) => r.rev));
+  await db.update(syncState).set({ rev: sql`max(${syncState.rev}, ${maxRev})` }).where(eq(syncState.id, 1));
 }

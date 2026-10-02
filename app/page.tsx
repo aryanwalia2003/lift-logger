@@ -1,12 +1,20 @@
+"use client";
 import Link from "next/link";
-import { LABELS, LABEL_KEYS } from "@/lib/catalog";
-import { startWorkout } from "@/lib/actions";
+import { useRouter } from "next/navigation";
+import { useLiveQuery } from "dexie-react-hooks";
+import { LABELS, LABEL_KEYS, type Label } from "@/lib/catalog";
 import { logout } from "@/lib/auth-actions";
-import { recentWorkouts } from "@/lib/workouts";
+import { store } from "@/lib/client";
 
-export const dynamic = "force-dynamic";
+export default function Home() {
+  const router = useRouter();
+  const recent = useLiveQuery(() => store.recentWorkouts(), []) ?? [];
 
-export default async function Home() {
+  async function start(label: Label) {
+    const w = await store.createWorkout(label);
+    router.push(`/workout?id=${w.id}`);
+  }
+
   return (
     <main className="mx-auto w-full max-w-md p-4">
       <div className="flex items-baseline justify-between">
@@ -14,18 +22,18 @@ export default async function Home() {
         <Link href="/analytics" className="text-sm font-semibold underline">Analytics →</Link>
       </div>
       <p className="mb-4 text-sm opacity-60">What kind of day is it?</p>
-      <form action={startWorkout} className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {LABEL_KEYS.map((k) => (
-          <button key={k} name="label" value={k} className="rounded-xl border border-current/20 p-5 text-lg font-semibold active:bg-current/10">
+          <button key={k} type="button" onClick={() => void start(k)} className="rounded-xl border border-current/20 p-5 text-lg font-semibold active:bg-current/10">
             {LABELS[k].name}
           </button>
         ))}
-      </form>
+      </div>
       <h2 className="mb-2 mt-8 text-sm font-semibold uppercase opacity-60">Recent</h2>
       <ul className="space-y-2">
-        {(await recentWorkouts()).map((w) => (
+        {recent.map((w) => (
           <li key={w.id}>
-            <Link href={`/workout/${w.id}`} className="flex justify-between rounded-lg border border-current/20 p-3">
+            <Link href={`/workout?id=${w.id}`} className="flex justify-between rounded-lg border border-current/20 p-3">
               <span>{LABELS[w.label].name}</span>
               <span className="opacity-60">{w.date}</span>
             </Link>

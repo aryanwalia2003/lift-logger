@@ -1,16 +1,15 @@
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { bodyParts, exercises, sets, workouts } from "@/db/schema";
 import type { Label } from "./catalog";
 
-// Poora analytics ek flat rows list se — personal data chhota hai, JS me group karna kaafi hai
-// ponytail: saari rows memory me; lakhon sets ho jaayein to SQL aggregate pe jao
+const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0); // ids ka code-unit order (store.ts jaisa)
+
+// Poora analytics ek flat rows list se — client pe local data par chalta hai (offline bhi)
+// ponytail: saari rows memory me; lakhon sets ho jaayein to aggregate/index chahiye
 export type Row = {
-  workoutId: number; date: string; label: Label;
+  workoutId: string; date: string; label: Label;
   exerciseId: number; exercise: string;
   partId: number; part: string; topId: number; top: string;
   setNo: number; weight: number; reps: number;
-  isDrop: boolean; supersetId: number | null; note: string | null;
+  isDrop: boolean; supersetId: string | null; note: string | null;
 };
 
 export const vol = (r: Row) => r.weight * r.reps;
@@ -32,29 +31,6 @@ export function groupBy<T, K>(a: T[], f: (t: T) => K) {
 }
 export const countBy = <T>(a: T[], f: (t: T) => string) =>
   Object.fromEntries([...groupBy(a, f)].map(([k, v]) => [k, v.length])) as Record<string, number>;
-
-export async function loadRows(): Promise<Row[]> {
-  const parts = new Map((await db.select().from(bodyParts).all()).map((p) => [p.id, p]));
-  const data = await db
-    .select({
-      workoutId: workouts.id, date: workouts.date, label: workouts.label,
-      exerciseId: exercises.id, exercise: exercises.name, bodyPartId: exercises.bodyPartId,
-      setNo: sets.setNo, weight: sets.weightKg, reps: sets.reps,
-      parentSetId: sets.parentSetId, supersetId: sets.supersetId, note: sets.note,
-    })
-    .from(sets)
-    .innerJoin(workouts, eq(sets.workoutId, workouts.id))
-    .innerJoin(exercises, eq(sets.exerciseId, exercises.id))
-    .orderBy(workouts.date, workouts.id, sets.id)
-    .all();
-  return data.map(({ bodyPartId, parentSetId, ...r }) => {
-      const leaf = parts.get(bodyPartId)!;
-      const top = parts.get(leaf.parentId ?? leaf.id)!;
-      return { ...r, isDrop: parentSetId !== null, partId: leaf.id, part: leaf.name, topId: top.id, top: top.name };
-    });
-}
-
-export const partName = async (id: number) => (await db.select().from(bodyParts).where(eq(bodyParts.id, id)).get())?.name;
 
 // ---- dates (sab YYYY-MM-DD, UTC math) ----
 export const today = () => new Date().toLocaleDateString("en-CA");
@@ -82,7 +58,7 @@ export function sessions(rows: Row[]) {
       id, date: rs[0].date, label: rs[0].label, sets: nSets(rs),
       volume: sum(rs.map(vol)), parts: countBy(rs, (r) => r.top),
     }))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+    .sort((a, b) => a.date.localeCompare(b.date) || cmp(a.id, b.id));
 }
 
 // Continuous weeks (khali hafte bhi), aakhri `weeks` ke
@@ -148,7 +124,7 @@ export function exerciseSessions(rows: Row[]) {
       const top = ws.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a));
       return { id, date: rs[0].date, sets: rs, volume: sum(rs.map(vol)), topWeight: Math.max(...ws.map((r) => r.weight)), e1rm: e1rm(top), best: top };
     })
-    .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id)
+    .sort((a, b) => a.date.localeCompare(b.date) || cmp(a.id, b.id))
     .map((s, i) => {
       const pr = i > 0 && s.e1rm > best + 1e-9; // pehla session PR nahi
       best = Math.max(best, s.e1rm);

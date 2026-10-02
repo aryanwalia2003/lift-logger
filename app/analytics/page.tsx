@@ -1,13 +1,15 @@
+"use client";
 import Link from "next/link";
+import { useState } from "react";
 import { LABELS, PART_COLOR } from "@/lib/catalog";
-import { byExercise, byLabel, byPart, inRange, loadRows, parseRange, prs, schedule, summary, supersetPairs, today, weekly, weeksIn } from "@/lib/analytics";
-import { Bars, Card, Empty, HBars, Legend, RangeTabs, ScheduleGrid, Stats, kg, shortDate } from "./ui";
+import { byExercise, byLabel, byPart, inRange, prs, schedule, summary, supersetPairs, today, weekly, weeksIn, type Range } from "@/lib/analytics";
+import { useRows } from "@/lib/use-rows";
+import { Bars, Card, Empty, HBars, Legend, Loading, RangeTabs, ScheduleGrid, Stats, kg, shortDate } from "./ui";
 
-export const dynamic = "force-dynamic";
-
-export default async function Overview({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  const range = parseRange((await searchParams).range);
-  const all = await loadRows();
+export default function Overview() {
+  const [range, setRange] = useState<Range>("90");
+  const all = useRows();
+  if (!all) return <Loading />;
   const rows = inRange(all, range);
   const s = summary(rows, range);
   const parts = byPart(rows);
@@ -20,7 +22,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
   return (
     <>
       <h1 className="mt-3 text-2xl font-bold">Analytics</h1>
-      <RangeTabs base="/analytics" current={range} />
+      <RangeTabs current={range} onChange={setRange} />
       {rows.length === 0 ? <Card title="Nothing found"><Empty /></Card> : (
         <>
           <Stats items={[
@@ -40,11 +42,11 @@ export default async function Overview({ searchParams }: { searchParams: Promise
           </Card>
 
           <Card title="Sessions by label" sub="Tap a label for its analysis">
-            <HBars rows={byLabel(rows).map((l) => ({ label: LABELS[l.label].name, value: l.count, href: `/analytics/label/${l.label}`, sub: `avg ${Math.round(l.avgSets)} sets · ${l.everyDays ? `every ${l.everyDays.toFixed(1)} days` : "once"}` }))} />
+            <HBars rows={byLabel(rows).map((l) => ({ label: LABELS[l.label].name, value: l.count, href: `/analytics/label?key=${l.label}`, sub: `avg ${Math.round(l.avgSets)} sets · ${l.everyDays ? `every ${l.everyDays.toFixed(1)} days` : "once"}` }))} />
           </Card>
 
           <Card title="Sets by body part">
-            <HBars rows={parts.map((p) => ({ label: p.name, value: p.sets, href: `/analytics/part/${p.id}`, color: PART_COLOR[p.name], sub: `${p.sessions} sessions · last ${shortDate(p.last)}` }))} />
+            <HBars rows={parts.map((p) => ({ label: p.name, value: p.sets, href: `/analytics/part?id=${p.id}`, color: PART_COLOR[p.name], sub: `${p.sessions} sessions · last ${shortDate(p.last)}` }))} />
           </Card>
 
           {(s.drops > 0 || s.rounds > 0) && (
@@ -58,7 +60,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
               <ul className="divide-y divide-current/10">
                 {recentPrs.map((p) => (
                   <li key={p.exerciseId + p.date}>
-                    <Link href={`/analytics/exercise/${p.exerciseId}`} className="flex items-center justify-between gap-3 py-2">
+                    <Link href={`/analytics/exercise?id=${p.exerciseId}`} className="flex items-center justify-between gap-3 py-2">
                       <span className="min-w-0"><span className="block truncate text-sm capitalize">{p.exercise}</span><span className="text-xs opacity-60">{shortDate(p.date)} · {p.best.weight} × {p.best.reps}</span></span>
                       <span className="shrink-0 text-sm font-semibold tabular-nums">{Math.round(p.e1rm)} kg</span>
                     </Link>
@@ -80,7 +82,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
             <ul>
               {exs.filter((e) => e.topId === p.id).map((e) => (
                 <li key={e.id}>
-                  <Link href={`/analytics/exercise/${e.id}`} className="flex justify-between gap-3 py-2 pl-5 text-sm">
+                  <Link href={`/analytics/exercise?id=${e.id}`} className="flex justify-between gap-3 py-2 pl-5 text-sm">
                     <span className="truncate capitalize">{e.name}</span><span className="shrink-0 opacity-60">{e.sets} sets</span>
                   </Link>
                 </li>

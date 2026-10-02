@@ -39,18 +39,21 @@ export function Stats({ items }: { items: [string, string][] }) {
   );
 }
 
-export function RangeTabs({ base, current }: { base: string; current: Range }) {
+export function RangeTabs({ current, onChange }: { current: Range; onChange: (r: Range) => void }) {
   return (
     <div className="mt-3 flex gap-1 rounded-full border border-current/15 p-1 text-sm">
       {(Object.keys(RANGES) as Range[]).map((r) => (
-        <Link key={r} href={`${base}?range=${r}`} replace scroll={false}
+        <button key={r} type="button" onClick={() => onChange(r)}
           className={`flex-1 rounded-full py-1.5 text-center ${r === current ? "bg-foreground text-background" : "opacity-70"}`}>
           {RANGES[r]}
-        </Link>
+        </button>
       ))}
     </div>
   );
 }
+
+export const Loading = () => <p className="mt-6 text-center text-sm opacity-60">Loading…</p>;
+export const Missing = ({ what }: { what: string }) => <p className="mt-6 text-center text-sm opacity-60">{what} not found.</p>;
 
 export function Legend({ keys }: { keys: string[] }) {
   return (
