@@ -52,10 +52,15 @@ export function WorkoutClient() {
   const fillW = dropMode && dropFrom ? Math.round(dropFrom.weightKg * 0.8 * 2) / 2 : prev?.weightKg;
   const fillR = dropMode && dropFrom ? dropFrom.reps : prev?.reps;
 
-  const byEx = [...new Set(logged.map((s) => s.exerciseId))].map((eid) => ({
-    name: logged.find((s) => s.exerciseId === eid)!.exercise,
-    sets: logged.filter((s) => s.exerciseId === eid),
-  }));
+  // Chronological blocks: lagatar same exercise (ya same superset pair) = 1 block; wapas aane pe naya block + naya number
+  const blocks: { key: string; groups: { name: string; sets: typeof logged }[] }[] = [];
+  for (const s of logged) {
+    const mate = s.supersetId ? logged.find((x) => x.supersetId === s.supersetId && x.exerciseId !== s.exerciseId) : undefined;
+    const key = mate ? [s.exerciseId, mate.exerciseId].sort().join("+") : String(s.exerciseId);
+    if (blocks.at(-1)?.key !== key) blocks.push({ key, groups: [] });
+    const gs = blocks.at(-1)!.groups;
+    (gs.find((g) => g.name === s.exercise) ?? gs[gs.push({ name: s.exercise, sets: [] }) - 1]).sets.push(s);
+  }
   const partnerOf = (s: (typeof logged)[number]) =>
     s.supersetId ? logged.find((x) => x.supersetId === s.supersetId && x.exerciseId !== s.exerciseId)?.exercise : undefined;
 
@@ -115,12 +120,12 @@ export function WorkoutClient() {
         </>
       )}
 
-      {byEx.length > 0 && (
+      {blocks.length > 0 && (
         <>
           <h2 className="mb-2 mt-8 text-sm font-semibold uppercase opacity-60">Today&apos;s log</h2>
-          {byEx.map((g) => (
-            <div key={g.name} className="mb-3">
-              <div className="font-medium capitalize">{g.name}</div>
+          {blocks.flatMap((b, i) => b.groups.map((g, gi) => (
+            <div key={`${i}-${g.name}`} className="mb-3">
+              <div className="font-medium capitalize">{gi === 0 && <span className="mr-1 opacity-60">{i + 1}.</span>}{g.name}</div>
               {g.sets.map((s) => (
                 <div key={s.id} className="flex items-start justify-between text-sm">
                   {/* Tap = edit (weight/reps/note), closed by default */}
@@ -147,7 +152,7 @@ export function WorkoutClient() {
                 </div>
               ))}
             </div>
-          ))}
+          )))}
         </>
       )}
 
