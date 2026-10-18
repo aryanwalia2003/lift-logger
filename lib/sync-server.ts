@@ -35,12 +35,14 @@ function workoutRow(v: unknown): WorkoutRow {
 function setRow(v: unknown): SetRow {
   const r = obj(v, "set");
   if (typeof r.weightKg !== "number" || !(r.weightKg >= 0 && r.weightKg <= 5000)) bad("Invalid weight");
+  const isAmrap = r.isAmrap === true || r.isAmrap === false ? r.isAmrap : bad("Invalid isAmrap");
   return {
     id: id(r.id, "set id"), workoutId: id(r.workoutId, "workout id"),
     exerciseId: EXERCISE_IDS.has(r.exerciseId as number) ? (r.exerciseId as number) : bad("Invalid exercise"),
-    setNo: int(r.setNo, 1, 1000, "set number"), weightKg: r.weightKg as number, reps: int(r.reps, 1, 1000, "reps"),
+    setNo: int(r.setNo, 1, 1000, "set number"), weightKg: r.weightKg as number,
+    reps: isAmrap ? (r.reps === null ? null : bad("AMRAP set has reps")) : int(r.reps, 1, 1000, "reps"),
     parentSetId: idOrNull(r.parentSetId, "parent set id"), supersetId: idOrNull(r.supersetId, "superset id"),
-    note: textOrNull(r.note, 500, "note"), isAmrap: r.isAmrap === true || r.isAmrap === false ? r.isAmrap : bad("Invalid isAmrap"),
+    note: textOrNull(r.note, 500, "note"), isAmrap,
     updatedAt: int(r.updatedAt, 1, 1e15, "updatedAt"), deletedAt: r.deletedAt === null ? null : int(r.deletedAt, 1, 1e15, "deletedAt"),
   };
 }

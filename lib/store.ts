@@ -14,8 +14,9 @@ export function newId() {
   return ts.toString(36).padStart(9, "0") + counter.toString(36).padStart(3, "0") + Math.random().toString(36).slice(2, 8).padEnd(6, "0");
 }
 
-const check = (weightKg: number, reps: number) => {
-  if (!Number.isFinite(weightKg) || weightKg < 0 || !Number.isInteger(reps) || reps < 1) throw new Error("Invalid weight or reps");
+const check = (weightKg: number, reps: number | null, isAmrap: boolean) => {
+  if (!Number.isFinite(weightKg) || weightKg < 0) throw new Error("Invalid weight");
+  if (!isAmrap && (!Number.isInteger(reps) || (reps as number) < 1)) throw new Error("Invalid reps");
 };
 const cleanNote = (s?: string | null) => {
   const t = (s ?? "").trim();
@@ -32,8 +33,9 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
   const exerciseSets = (workoutId: string, exerciseId: number) =>
     db.sets.where("workoutId").equals(workoutId).filter((s) => s.exerciseId === exerciseId && alive(s)).toArray();
 
-  async function buildSet(workoutId: string, exerciseId: number, weightKg: number, reps: number, o: { drop?: boolean; supersetId?: string; isAmrap?: boolean }): Promise<LSet> {
-    check(weightKg, reps);
+  async function buildSet(workoutId: string, exerciseId: number, weightKg: number, reps: number | null, o: { drop?: boolean; supersetId?: string; isAmrap?: boolean }): Promise<LSet> {
+    const isAmrap = !!o.isAmrap;
+    check(weightKg, reps, isAmrap);
     const w = await db.workouts.get(workoutId);
     if (!w || w.deletedAt) throw new Error("Workout not found");
     if (!exerciseById(exerciseId)) throw new Error("Invalid exercise");
@@ -42,7 +44,7 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
     if (o.drop && !parent) throw new Error("Log a main set before adding a drop");
     return {
       id: newId(), workoutId, exerciseId, setNo: parent?.setNo ?? Math.max(0, ...mains.map((m) => m.setNo)) + 1,
-      weightKg, reps, parentSetId: parent?.id ?? null, supersetId: o.supersetId ?? null, note: null, isAmrap: !!o.isAmrap,
+      weightKg, reps: isAmrap ? null : reps, parentSetId: parent?.id ?? null, supersetId: o.supersetId ?? null, note: null, isAmrap,
       updatedAt: Date.now(), deletedAt: null, dirty: 1,
     };
   }
@@ -57,7 +59,7 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
     },
 
     // Drop set = us exercise ke latest main set se attach; setNo parent wala hi
-    async addSet(workoutId: string, exerciseId: number, weightKg: number, reps: number, o: { drop?: boolean; supersetId?: string; isAmrap?: boolean } = {}) {
+    async addSet(workoutId: string, exerciseId: number, weightKg: number, reps: number | null, o: { drop?: boolean; supersetId?: string; isAmrap?: boolean } = {}) {
       const s = await buildSet(workoutId, exerciseId, weightKg, reps, o);
       await db.sets.add(s);
       onChange();
@@ -65,7 +67,7 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
     },
 
     // Superset round: dono sets same supersetId, ek saath (sab validate hone ke baad hi insert)
-    async addRound(workoutId: string, items: { exerciseId: number; weightKg: number; reps: number; isAmrap?: boolean }[]) {
+    async addRound(workoutId: string, items: { exerciseId: number; weightKg: number; reps: number | null; isAmrap?: boolean }[]) {
       if (items.length !== 2 || items[0].exerciseId === items[1].exerciseId) throw new Error("A superset needs 2 different exercises");
       const supersetId = newId();
       const rows = [];
@@ -75,11 +77,12 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
       return rows;
     },
 
-    async updateSet(id: string, weightKg: number, reps: number, note?: string, isAmrap?: boolean) {
-      check(weightKg, reps);
+    async updateSet(id: string, weightKg: number, reps: number | null, note?: string, isAmrap?: boolean) {
+      const amrap = !!isAmrap;
+      check(weightKg, reps, amrap);
       const s = await db.sets.get(id);
       if (!s || s.deletedAt) throw new Error("Set not found");
-      const next: LSet = { ...s, weightKg, reps, note: cleanNote(note), isAmrap: !!isAmrap, updatedAt: Date.now(), dirty: 1 };
+      const next: LSet = { ...s, weightKg, reps: amrap ? null : reps, note: cleanNote(note), isAmrap: amrap, updatedAt: Date.now(), dirty: 1 };
       await db.sets.put(next);
       onChange();
       return next;

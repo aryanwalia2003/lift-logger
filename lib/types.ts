@@ -3,7 +3,7 @@ import type { Label } from "./catalog";
 // Sync ke dono taraf ke row shapes (client + server)
 export type WorkoutRow = { id: string; date: string; label: Label; notes: string | null; updatedAt: number; deletedAt: number | null };
 export type SetRow = {
-  id: string; workoutId: string; exerciseId: number; setNo: number; weightKg: number; reps: number;
+  id: string; workoutId: string; exerciseId: number; setNo: number; weightKg: number; reps: number | null;
   parentSetId: string | null; supersetId: string | null; note: string | null; isAmrap: boolean;
   updatedAt: number; deletedAt: number | null;
 };

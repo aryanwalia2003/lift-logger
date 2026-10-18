@@ -31,7 +31,7 @@ export const sets = sqliteTable("sets", {
   exerciseId: integer("exercise_id").notNull().references(() => exercises.id),
   setNo: integer("set_no").notNull(),
   weightKg: real("weight_kg").notNull(),
-  reps: integer("reps").notNull(),
+  reps: integer("reps"), // AMRAP set to null — fixed target nahi
   // Drop set: parent main set ka id (drop = parent ke baad bina rest ke kam weight)
   parentSetId: text("parent_set_id").references((): AnySQLiteColumn => sets.id),
   // Superset: ek round ke dono sets ka same id

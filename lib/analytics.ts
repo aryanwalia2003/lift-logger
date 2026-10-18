@@ -8,12 +8,12 @@ export type Row = {
   workoutId: string; date: string; label: Label;
   exerciseId: number; exercise: string;
   partId: number; part: string; topId: number; top: string;
-  setNo: number; weight: number; reps: number;
+  setNo: number; weight: number; reps: number | null;
   isDrop: boolean; supersetId: string | null; note: string | null; isAmrap: boolean;
 };
 
-export const vol = (r: Row) => r.weight * r.reps;
-export const e1rm = (r: Row) => r.weight * (1 + r.reps / 30); // Epley
+export const vol = (r: Row) => r.weight * (r.reps ?? 0); // AMRAP: reps pata nahi, volume me 0
+export const e1rm = (r: Row) => (r.reps == null ? 0 : r.weight * (1 + r.reps / 30)); // Epley
 const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
 // Drop set alag "set" nahi — parent set ka hissa. Volume me count, sets/e1RM/rep-range me nahi
 const work = (rs: Row[]) => rs.filter((r) => !r.isDrop);
@@ -156,7 +156,7 @@ export function prs(all: Row[]) {
 export const REP_BUCKETS: [string, (r: number) => boolean][] = [
   ["1–5", (r) => r <= 5], ["6–8", (r) => r >= 6 && r <= 8], ["9–12", (r) => r >= 9 && r <= 12], ["13+", (r) => r >= 13],
 ];
-export const repBuckets = (rows: Row[]) => REP_BUCKETS.map(([label, f]) => ({ label, value: work(rows).filter((r) => f(r.reps)).length }));
+export const repBuckets = (rows: Row[]) => REP_BUCKETS.map(([label, f]) => ({ label, value: work(rows).filter((r) => r.reps !== null && f(r.reps)).length }));
 
 // Superset pairs: kaunsi exercises saath me kitne rounds
 export function supersetPairs(rows: Row[]) {

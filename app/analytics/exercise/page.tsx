@@ -58,9 +58,9 @@ function ExercisePage() {
                 <li key={s.id}>
                   <Link href={`/workout?id=${s.id}`} className="block py-2 text-sm">
                     <span className="flex justify-between"><span>{shortDate(s.date)}{s.sets.some((r) => r.supersetId) && <span className="ml-2 rounded bg-current/10 px-1.5 py-0.5 text-xs">SS</span>}</span>{s.pr && <span className="font-semibold">🏆 PR</span>}</span>
-                    <span className="text-xs opacity-60">{s.sets.map((r) => `${r.isDrop ? "↳" : ""}${r.weight}×${r.reps}`).join(" · ")}</span>
+                    <span className="text-xs opacity-60">{s.sets.map((r) => `${r.isDrop ? "↳" : ""}${r.weight}×${r.reps ?? "AMRAP"}`).join(" · ")}</span>
                     {s.sets.filter((r) => r.note).map((r, i) => (
-                      <span key={i} className="mt-0.5 block text-xs italic opacity-60">&ldquo;{r.note}&rdquo; ({r.weight}×{r.reps})</span>
+                      <span key={i} className="mt-0.5 block text-xs italic opacity-60">&ldquo;{r.note}&rdquo; ({r.weight}×{r.reps ?? "AMRAP"})</span>
                     ))}
                   </Link>
                 </li>

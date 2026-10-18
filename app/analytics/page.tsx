@@ -61,7 +61,7 @@ export default function Overview() {
                 {recentPrs.map((p) => (
                   <li key={p.exerciseId + p.date}>
                     <Link href={`/analytics/exercise?id=${p.exerciseId}`} className="flex items-center justify-between gap-3 py-2">
-                      <span className="min-w-0"><span className="block truncate text-sm capitalize">{p.exercise}</span><span className="text-xs opacity-60">{shortDate(p.date)} · {p.best.weight} × {p.best.reps}</span></span>
+                      <span className="min-w-0"><span className="block truncate text-sm capitalize">{p.exercise}</span><span className="text-xs opacity-60">{shortDate(p.date)} · {p.best.weight} × {p.best.reps ?? "AMRAP"}</span></span>
                       <span className="shrink-0 text-sm font-semibold tabular-nums">{Math.round(p.e1rm)} kg</span>
                     </Link>
                   </li>

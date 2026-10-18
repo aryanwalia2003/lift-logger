@@ -36,6 +36,13 @@
       "when": 1792302048453,
       "tag": "0004_add_sets_is_amrap",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792332391298,
+      "tag": "0005_sets_reps_nullable",
+      "breakpoints": true
     }
   ]
 }
