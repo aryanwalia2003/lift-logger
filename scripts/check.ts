@@ -44,7 +44,7 @@ async function legacyMigration() {
   await seed(db);
   await seed(db); // dobara — duplicate nahi hona chahiye
   const { EXERCISE_ROWS, PART_ROWS } = await import("@/lib/catalog");
-  assert.equal(EXERCISE_ROWS.length, 44);
+  assert.equal(EXERCISE_ROWS.length, 45);
   assert.deepEqual((await client.execute("select id, name from exercises order by id")).rows.map((r) => [Number(r.id), r.name]), EXERCISE_ROWS.map((e) => [e.id, e.name]));
   assert.deepEqual((await client.execute("select id, name, parent_id from body_parts order by id")).rows.map((r) => [Number(r.id), r.name, r.parent_id === null ? null : Number(r.parent_id)]), PART_ROWS.map((p) => [p.id, p.name, p.parentId]));
   const ex = (name: string) => EXERCISE_ROWS.find((e) => e.name === name)!.id;
@@ -52,7 +52,7 @@ async function legacyMigration() {
   // ---- server: validation, LWW, tombstones, FK refs, pagination ----
   const { applySync, SyncError } = await import("@/lib/sync-server");
   const W = (id: string, over = {}) => ({ id, date: "2026-10-01", label: "PUSH", notes: null, updatedAt: 1000, deletedAt: null, ...over });
-  const S = (id: string, workoutId: string, over = {}) => ({ id, workoutId, exerciseId: ex("squats"), setNo: 1, weightKg: 100, reps: 5, parentSetId: null, supersetId: null, note: null, updatedAt: 1000, deletedAt: null, ...over });
+  const S = (id: string, workoutId: string, over = {}) => ({ id, workoutId, exerciseId: ex("squats"), setNo: 1, weightKg: 100, reps: 5, parentSetId: null, supersetId: null, note: null, isAmrap: false, updatedAt: 1000, deletedAt: null, ...over });
   const push = (workouts: unknown[], sets: unknown[], since = 0) => applySync(db, { since, workouts, sets });
   const rejects = async (w: unknown[], s: unknown[], msg: RegExp) => assert.rejects(push(w, s), (e) => e instanceof SyncError && msg.test(e.message));
 

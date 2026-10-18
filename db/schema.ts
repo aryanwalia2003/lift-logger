@@ -37,6 +37,7 @@ export const sets = sqliteTable("sets", {
   // Superset: ek round ke dono sets ka same id
   supersetId: text("superset_id"),
   note: text("note"), // optional, edit se hi set hota hai
+  isAmrap: integer("is_amrap", { mode: "boolean" }).notNull().default(false), // reps fixed target nahi, max-effort tha
   updatedAt: integer("updated_at").notNull(),
   deletedAt: integer("deleted_at"),
   rev: integer("rev").notNull().default(0),

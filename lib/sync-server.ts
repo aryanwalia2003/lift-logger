@@ -40,7 +40,7 @@ function setRow(v: unknown): SetRow {
     exerciseId: EXERCISE_IDS.has(r.exerciseId as number) ? (r.exerciseId as number) : bad("Invalid exercise"),
     setNo: int(r.setNo, 1, 1000, "set number"), weightKg: r.weightKg as number, reps: int(r.reps, 1, 1000, "reps"),
     parentSetId: idOrNull(r.parentSetId, "parent set id"), supersetId: idOrNull(r.supersetId, "superset id"),
-    note: textOrNull(r.note, 500, "note"),
+    note: textOrNull(r.note, 500, "note"), isAmrap: r.isAmrap === true || r.isAmrap === false ? r.isAmrap : bad("Invalid isAmrap"),
     updatedAt: int(r.updatedAt, 1, 1e15, "updatedAt"), deletedAt: r.deletedAt === null ? null : int(r.deletedAt, 1, 1e15, "deletedAt"),
   };
 }
@@ -95,7 +95,7 @@ export async function applySync(db: DB, raw: unknown): Promise<SyncResponse> {
           target: sets.id,
           set: {
             exerciseId: sql`excluded.exercise_id`, setNo: sql`excluded.set_no`, weightKg: sql`excluded.weight_kg`, reps: sql`excluded.reps`,
-            parentSetId: sql`excluded.parent_set_id`, supersetId: sql`excluded.superset_id`, note: sql`excluded.note`,
+            parentSetId: sql`excluded.parent_set_id`, supersetId: sql`excluded.superset_id`, note: sql`excluded.note`, isAmrap: sql`excluded.is_amrap`,
             updatedAt: sql`excluded.updated_at`, deletedAt: sql`excluded.deleted_at`, rev: sql`excluded.rev`,
           },
           setWhere: sql`excluded.updated_at >= ${sets.updatedAt}`,
@@ -122,7 +122,7 @@ export async function applySync(db: DB, raw: unknown): Promise<SyncResponse> {
     workouts: page.flatMap((p) => (p.t === "w" ? [{ id: p.r.id, date: p.r.date, label: p.r.label, notes: p.r.notes, updatedAt: p.r.updatedAt, deletedAt: p.r.deletedAt }] : [])),
     sets: page.flatMap((p) =>
       p.t === "s"
-        ? [{ id: p.r.id, workoutId: p.r.workoutId, exerciseId: p.r.exerciseId, setNo: p.r.setNo, weightKg: p.r.weightKg, reps: p.r.reps, parentSetId: p.r.parentSetId, supersetId: p.r.supersetId, note: p.r.note, updatedAt: p.r.updatedAt, deletedAt: p.r.deletedAt }]
+        ? [{ id: p.r.id, workoutId: p.r.workoutId, exerciseId: p.r.exerciseId, setNo: p.r.setNo, weightKg: p.r.weightKg, reps: p.r.reps, parentSetId: p.r.parentSetId, supersetId: p.r.supersetId, note: p.r.note, isAmrap: p.r.isAmrap, updatedAt: p.r.updatedAt, deletedAt: p.r.deletedAt }]
         : [],
     ),
   };

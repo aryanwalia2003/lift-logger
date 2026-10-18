@@ -1,0 +1,1 @@
+ALTER TABLE `sets` ADD `is_amrap` integer DEFAULT false NOT NULL;

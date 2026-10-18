@@ -32,7 +32,7 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
   const exerciseSets = (workoutId: string, exerciseId: number) =>
     db.sets.where("workoutId").equals(workoutId).filter((s) => s.exerciseId === exerciseId && alive(s)).toArray();
 
-  async function buildSet(workoutId: string, exerciseId: number, weightKg: number, reps: number, o: { drop?: boolean; supersetId?: string }): Promise<LSet> {
+  async function buildSet(workoutId: string, exerciseId: number, weightKg: number, reps: number, o: { drop?: boolean; supersetId?: string; isAmrap?: boolean }): Promise<LSet> {
     check(weightKg, reps);
     const w = await db.workouts.get(workoutId);
     if (!w || w.deletedAt) throw new Error("Workout not found");
@@ -42,7 +42,7 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
     if (o.drop && !parent) throw new Error("Log a main set before adding a drop");
     return {
       id: newId(), workoutId, exerciseId, setNo: parent?.setNo ?? Math.max(0, ...mains.map((m) => m.setNo)) + 1,
-      weightKg, reps, parentSetId: parent?.id ?? null, supersetId: o.supersetId ?? null, note: null,
+      weightKg, reps, parentSetId: parent?.id ?? null, supersetId: o.supersetId ?? null, note: null, isAmrap: !!o.isAmrap,
       updatedAt: Date.now(), deletedAt: null, dirty: 1,
     };
   }
@@ -57,7 +57,7 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
     },
 
     // Drop set = us exercise ke latest main set se attach; setNo parent wala hi
-    async addSet(workoutId: string, exerciseId: number, weightKg: number, reps: number, o: { drop?: boolean; supersetId?: string } = {}) {
+    async addSet(workoutId: string, exerciseId: number, weightKg: number, reps: number, o: { drop?: boolean; supersetId?: string; isAmrap?: boolean } = {}) {
       const s = await buildSet(workoutId, exerciseId, weightKg, reps, o);
       await db.sets.add(s);
       onChange();
@@ -65,21 +65,21 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
     },
 
     // Superset round: dono sets same supersetId, ek saath (sab validate hone ke baad hi insert)
-    async addRound(workoutId: string, items: { exerciseId: number; weightKg: number; reps: number }[]) {
+    async addRound(workoutId: string, items: { exerciseId: number; weightKg: number; reps: number; isAmrap?: boolean }[]) {
       if (items.length !== 2 || items[0].exerciseId === items[1].exerciseId) throw new Error("A superset needs 2 different exercises");
       const supersetId = newId();
       const rows = [];
-      for (const i of items) rows.push(await buildSet(workoutId, i.exerciseId, i.weightKg, i.reps, { supersetId }));
+      for (const i of items) rows.push(await buildSet(workoutId, i.exerciseId, i.weightKg, i.reps, { supersetId, isAmrap: i.isAmrap }));
       await db.sets.bulkAdd(rows);
       onChange();
       return rows;
     },
 
-    async updateSet(id: string, weightKg: number, reps: number, note?: string) {
+    async updateSet(id: string, weightKg: number, reps: number, note?: string, isAmrap?: boolean) {
       check(weightKg, reps);
       const s = await db.sets.get(id);
       if (!s || s.deletedAt) throw new Error("Set not found");
-      const next: LSet = { ...s, weightKg, reps, note: cleanNote(note), updatedAt: Date.now(), dirty: 1 };
+      const next: LSet = { ...s, weightKg, reps, note: cleanNote(note), isAmrap: !!isAmrap, updatedAt: Date.now(), dirty: 1 };
       await db.sets.put(next);
       onChange();
       return next;
@@ -141,7 +141,7 @@ export function makeStore(db: LiftDB, onChange: () => void = () => {}) {
           return {
             workoutId: w.id, date: w.date, label: w.label, exerciseId: e.id, exercise: e.name,
             partId: leaf.id, part: leaf.name, topId: top.id, top: top.name,
-            setNo: s.setNo, weight: s.weightKg, reps: s.reps, isDrop: !!s.parentSetId, supersetId: s.supersetId, note: s.note,
+            setNo: s.setNo, weight: s.weightKg, reps: s.reps, isDrop: !!s.parentSetId, supersetId: s.supersetId, note: s.note, isAmrap: s.isAmrap,
           };
         });
     },

@@ -9,7 +9,7 @@ export type Row = {
   exerciseId: number; exercise: string;
   partId: number; part: string; topId: number; top: string;
   setNo: number; weight: number; reps: number;
-  isDrop: boolean; supersetId: string | null; note: string | null;
+  isDrop: boolean; supersetId: string | null; note: string | null; isAmrap: boolean;
 };
 
 export const vol = (r: Row) => r.weight * r.reps;

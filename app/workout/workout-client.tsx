@@ -129,21 +129,25 @@ export function WorkoutClient() {
               {g.sets.map((s) => (
                 <div key={s.id} className="flex items-start justify-between text-sm">
                   {/* Tap = edit (weight/reps/note), closed by default */}
-                  <details key={`${s.weightKg}-${s.reps}-${s.note}`} className="min-w-0 flex-1">
+                  <details key={`${s.weightKg}-${s.reps}-${s.note}-${s.isAmrap}`} className="min-w-0 flex-1">
                     <summary className="cursor-pointer list-none py-1">
                       <span className={s.parentSetId ? "pl-4 opacity-80" : ""}>
                         {s.parentSetId ? "↳ drop" : `#${s.setNo}`} · {s.weightKg} kg × {s.reps}
+                        {s.isAmrap && <span className="ml-2 rounded bg-current/10 px-1.5 py-0.5 text-xs">AMRAP</span>}
                         {partnerOf(s) && <span className="ml-2 rounded bg-current/10 px-1.5 py-0.5 text-xs capitalize">SS ⇄ {partnerOf(s)}</span>}
                         <span className="ml-2 text-xs opacity-30" aria-label="edit set">✎</span>
                       </span>
                       {s.note && <span className="block pl-4 text-xs italic opacity-60">&ldquo;{s.note}&rdquo;</span>}
                     </summary>
-                    <form action={(fd) => run(() => store.updateSet(s.id, num(fd, "weight"), num(fd, "reps"), String(fd.get("note") ?? "")))}
+                    <form action={(fd) => run(() => store.updateSet(s.id, num(fd, "weight"), num(fd, "reps"), String(fd.get("note") ?? ""), fd.get("amrap") === "on"))}
                       className="my-1 space-y-2 rounded-lg border border-current/15 p-3">
                       <div className="flex gap-2">
                         <input name="weight" type="number" inputMode="decimal" step="0.5" min="0" required defaultValue={s.weightKg} aria-label="Weight (kg)" className={input} />
                         <input name="reps" type="number" inputMode="numeric" min="1" required defaultValue={s.reps} aria-label="Reps" className={input} />
                       </div>
+                      <label className="flex items-center gap-2 text-sm opacity-80">
+                        <input name="amrap" type="checkbox" defaultChecked={s.isAmrap} className="h-4 w-4" /> AMRAP (max effort, not a fixed target)
+                      </label>
                       <input name="note" maxLength={500} defaultValue={s.note ?? ""} placeholder="Note (optional)" aria-label="Set note" className={input} />
                       <button className="w-full rounded-lg bg-foreground p-2 font-semibold text-background">Save</button>
                     </form>
@@ -181,8 +185,8 @@ export function WorkoutClient() {
               // Superset round: dono exercises ek form me
               <form key={`s${partner.id}-${lastKey}`}
                 action={(fd) => run(() => store.addRound(w.id, [
-                  { exerciseId: exercise.id, weightKg: num(fd, "weight_a"), reps: num(fd, "reps_a") },
-                  { exerciseId: partner.id, weightKg: num(fd, "weight_b"), reps: num(fd, "reps_b") },
+                  { exerciseId: exercise.id, weightKg: num(fd, "weight_a"), reps: num(fd, "reps_a"), isAmrap: fd.get("amrap_a") === "on" },
+                  { exerciseId: partner.id, weightKg: num(fd, "weight_b"), reps: num(fd, "reps_b"), isAmrap: fd.get("amrap_b") === "on" },
                 ]))}>
                 {([["a", exercise, prev], ["b", partner, prevB]] as const).map(([k, e, p]) => (
                   <div key={k} className="mb-2">
@@ -191,19 +195,25 @@ export function WorkoutClient() {
                       <input name={`weight_${k}`} type="number" inputMode="decimal" step="0.5" min="0" required defaultValue={p?.weightKg} placeholder="kg" className={input} />
                       <input name={`reps_${k}`} type="number" inputMode="numeric" min="1" required defaultValue={p?.reps} placeholder="reps" className={input} />
                     </div>
+                    <label className="mt-1 flex items-center gap-2 text-sm opacity-80">
+                      <input name={`amrap_${k}`} type="checkbox" className="h-4 w-4" /> AMRAP
+                    </label>
                   </div>
                 ))}
                 <button className="w-full rounded-lg bg-foreground p-3 font-semibold text-background">Log round</button>
               </form>
             ) : (
               <form key={`${dropMode ? "d" : "n"}${exercise.id}-${lastKey}`}
-                action={(fd) => run(() => store.addSet(w.id, exercise.id, num(fd, "weight"), num(fd, "reps"), { drop: dropMode }))}>
+                action={(fd) => run(() => store.addSet(w.id, exercise.id, num(fd, "weight"), num(fd, "reps"), { drop: dropMode, isAmrap: fd.get("amrap") === "on" }))}>
                 <div className="mb-2 text-sm capitalize">{exercise.name} {dropMode ? <span className="opacity-60">· drop (≈80% of last)</span> : prev && <span className="opacity-60">· last: {prev.weightKg} × {prev.reps}</span>}</div>
                 <div className="flex gap-2">
                   <input name="weight" type="number" inputMode="decimal" step="0.5" min="0" required defaultValue={fillW} placeholder="kg" className={input} />
                   <input name="reps" type="number" inputMode="numeric" min="1" required defaultValue={fillR} placeholder="reps" className={input} />
                   <button className="shrink-0 rounded-lg bg-foreground px-5 font-semibold text-background">{dropMode ? "Drop" : "Log"}</button>
                 </div>
+                <label className="mt-2 flex items-center gap-2 text-sm opacity-80">
+                  <input name="amrap" type="checkbox" className="h-4 w-4" /> AMRAP (max effort, not a fixed target)
+                </label>
               </form>
             )}
           </div>

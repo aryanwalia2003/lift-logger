@@ -43,6 +43,11 @@ export const PART_COLOR: Record<string, string> = {
   bicep: "var(--s5)", legs: "var(--s6)", "front delt": "var(--s3)", "side delt": "var(--s7)",
 };
 
+// Naye exercises yahan append karo — ids shift na ho
+const EXTRA_EXERCISES: { name: string; part: string }[] = [
+  { name: "lat pullover", part: "back" },
+];
+
 // ---- Catalog rows: ids deterministic (client aur server dono same), DB ke autoincrement order jaisa ----
 export type BodyPartRow = { id: number; name: string; parentId: number | null };
 export type ExerciseRow = { id: number; name: string; bodyPartId: number };
@@ -53,9 +58,10 @@ export const PART_ROWS: BodyPartRow[] = (() => {
   return ordered.map((p, i) => ({ id: i + 1, name: p.name, parentId: p.parent ? idOf(p.parent) : null }));
 })();
 
-export const EXERCISE_ROWS: ExerciseRow[] = Object.entries(EXERCISES)
-  .flatMap(([part, names]) => names.map((name) => ({ name, bodyPartId: PART_ROWS.find((p) => p.name === part)!.id })))
-  .map((e, i) => ({ id: i + 1, ...e }));
+export const EXERCISE_ROWS: ExerciseRow[] = [
+  ...Object.entries(EXERCISES).flatMap(([part, names]) => names.map((name) => ({ name, bodyPartId: PART_ROWS.find((p) => p.name === part)!.id }))),
+  ...EXTRA_EXERCISES.map(({ name, part }) => ({ name, bodyPartId: PART_ROWS.find((p) => p.name === part)!.id })),
+].map((e, i) => ({ id: i + 1, ...e }));
 
 export const partById = (id: number) => PART_ROWS.find((p) => p.id === id);
 export const exerciseById = (id: number) => EXERCISE_ROWS.find((e) => e.id === id);

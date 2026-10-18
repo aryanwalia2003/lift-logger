@@ -28,7 +28,7 @@ const ex = (n: string) => EXERCISE_ROWS.find((e) => e.name === n)!.id;
   const ws: WorkoutRow[] = [], ss: SetRow[] = [];
   const now = Date.now();
   const set = (workoutId: string, exerciseId: number, setNo: number, weightKg: number, reps: number, extra: Partial<SetRow> = {}) =>
-    ss.push({ id: newId(), workoutId, exerciseId, setNo, weightKg, reps, parentSetId: null, supersetId: null, note: null, updatedAt: now, deletedAt: null, ...extra });
+    ss.push({ id: newId(), workoutId, exerciseId, setNo, weightKg, reps, parentSetId: null, supersetId: null, note: null, isAmrap: false, updatedAt: now, deletedAt: null, ...extra });
   const start = addDays(today(), -70);
   for (let d = 0; d <= 70; d++) {
     const label = WEEK[d % 7];
